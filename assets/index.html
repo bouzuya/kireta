@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>_</title>
+  </head>
+  <body>
+    <script type="module">
+      import("/assets/pkg/wasm.js")
+        .then(({ default: init }) => init())
+        .then((mod) => {
+          console.log('init', mod);
+          console.log(mod.add(1, 2));
+        });
+    </script>
+  </body>
+</html>
