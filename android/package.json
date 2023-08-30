@@ -15,9 +15,6 @@
   "main": "node_modules/expo/AppEntry.js",
   "private": true,
   "scripts": {
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "start": "expo start",
-    "web": "expo start --web"
+    "start": "expo start"
   }
 }
