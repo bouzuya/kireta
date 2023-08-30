@@ -1,8 +1,9 @@
+import Constants from "expo-constants";
+import { randomUUID } from "expo-crypto";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useRef, useState } from "react";
 import { Button, StyleSheet, Text, View } from "react-native";
 import WebView, { WebViewMessageEvent } from "react-native-webview";
-import Constants from "expo-constants";
 
 export default function App() {
   const [count, setCount] = useState<number>(0);
@@ -17,7 +18,9 @@ export default function App() {
     setCount(message.result);
   }, []);
   const handleOnPress = useCallback((): void => {
+    const id = randomUUID();
     const message = {
+      id,
       name: "add",
       args: [count, 1],
     };

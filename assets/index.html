@@ -10,9 +10,9 @@
         .then(({ default: init }) => init())
         .then((mod) => {
           document.addEventListener('message', (event) => {
-            const { name, args } = JSON.parse(event.data);
+            const { args, id, name } = JSON.parse(event.data);
             const result = mod[name].apply(null, args);
-            window.ReactNativeWebView.postMessage(JSON.stringify({ name, args, result }));
+            window.ReactNativeWebView.postMessage(JSON.stringify({ id, result }));
           });
         });
     </script>
