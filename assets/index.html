@@ -9,8 +9,11 @@
       import("/assets/pkg/wasm.js")
         .then(({ default: init }) => init())
         .then((mod) => {
-          console.log('init', mod);
-          console.log(mod.add(1, 2));
+          document.addEventListener('message', (event) => {
+            const { name, args } = JSON.parse(event.data);
+            const result = mod[name].apply(null, args);
+            window.ReactNativeWebView.postMessage(JSON.stringify({ name, args, result }));
+          });
         });
     </script>
   </body>
