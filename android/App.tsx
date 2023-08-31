@@ -2,7 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useState } from "react";
 import { Button, StyleSheet, Text, View } from "react-native";
 import { WasmContextProvider, useWasm } from "./components/WasmContextProvider";
-import Constants from "expo-constants";
+import { useConfig } from "./hooks/useConfig";
 
 function MyApp(): JSX.Element {
   const { call } = useWasm();
@@ -22,10 +22,8 @@ function MyApp(): JSX.Element {
   );
 }
 
-export default function App() {
-  const backendBaseUrl = Constants.expoConfig?.extra?.backendBaseUrl ?? null;
-  if (backendBaseUrl === null)
-    throw new Error("BACKEND_BASE_URL is not defined");
+export default function App(): JSX.Element {
+  const { backendBaseUrl } = useConfig();
   const uri = `${backendBaseUrl}/assets/index.html`;
   return (
     <WasmContextProvider uri={uri}>
