@@ -1,14 +1,8 @@
 # kireta
 
-```console
-$ wasm-pack build --no-pack --release --target web crates/wasm
-...
+## メモ
 
-$ rm -rf assets/pkg
-$ mv crates/wasm/pkg assets/
-
-$ cargo run
-...
-
-$ open 'http://localhost:3000/assets/index.html'
-```
+- tsukota との違い
+  - Firebase Authentication -> 廃止
+  - Cloud Functions -> Cloud Run
+  - ...
