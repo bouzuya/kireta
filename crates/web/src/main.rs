@@ -23,7 +23,6 @@ async fn graphiql() -> impl IntoResponse {
 async fn main() -> anyhow::Result<()> {
     let schema = Schema::build(Query, EmptyMutation, EmptySubscription).finish();
     let app = Router::new()
-        .nest_service("/assets", ServeDir::new("./assets"))
         .route(
             "/graphql",
             routing::get(graphiql).post_service(GraphQL::new(schema)),
