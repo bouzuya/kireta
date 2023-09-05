@@ -1,34 +1,51 @@
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useState } from "react";
-import { Button, StyleSheet, Text, View } from "react-native";
-import { WasmContextProvider, useWasm } from "./components/WasmContextProvider";
-import { useConfig } from "./hooks/useConfig";
-
-function MyApp(): JSX.Element {
-  const { call } = useWasm();
-  const [count, setCount] = useState<number>(0);
-  const handleOnPress = useCallback((): void => {
-    (async () => {
-      const result = await call("add", [count, 1]);
-      setCount(result as number);
-    })();
-  }, [count]);
-  return (
-    <View style={styles.container}>
-      <StatusBar style="auto" />
-      <Text>{count}</Text>
-      <Button onPress={handleOnPress} title="Increment" />
-    </View>
-  );
-}
+import { useState } from "react";
+import { FlatList, StyleSheet, View } from "react-native";
+import { Checkbox, FAB, List, PaperProvider } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function App(): JSX.Element {
-  const { backendBaseUrl } = useConfig();
-  const uri = `${backendBaseUrl}/assets/index.html`;
+  const [items, setItems] = useState<{ id: number; name: string }[]>([]);
+  const [checked, setChecked] = useState<Record<number, boolean>>({});
   return (
-    <WasmContextProvider uri={uri}>
-      <MyApp />
-    </WasmContextProvider>
+    <PaperProvider>
+      <SafeAreaView>
+        <View style={styles.container}>
+          <StatusBar style="auto" />
+          <FlatList
+            data={items}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
+              <List.Item
+                left={(props) => (
+                  <Checkbox
+                    onPress={() =>
+                      setChecked((prev) => ({
+                        ...prev,
+                        [item.id]: !prev[item.id],
+                      }))
+                    }
+                    status={checked[item.id] ? "checked" : "unchecked"}
+                    {...props}
+                  />
+                )}
+                title={item.name}
+              />
+            )}
+          />
+        </View>
+        <FAB
+          icon="plus"
+          onPress={() => {
+            setItems((prev) => {
+              const id = (prev[prev.length - 1]?.id ?? 0) + 1;
+              return [...prev, { id, name: `Item ${id}` }];
+            });
+          }}
+          style={{ position: "absolute", right: 16, bottom: 16 }}
+        />
+      </SafeAreaView>
+    </PaperProvider>
   );
 }
 
