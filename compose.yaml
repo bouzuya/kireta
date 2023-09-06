@@ -1,0 +1,9 @@
+services:
+  android:
+    build: ./android/
+    env_file: ./android/.env
+    ports:
+      - "19000:19000"
+    tty: true
+    volumes:
+      - .:/home/node
