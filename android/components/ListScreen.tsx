@@ -1,16 +1,12 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Button } from "react-native-paper";
 
 export function ListScreen(): JSX.Element {
   const navigation = useNavigation();
   return (
     <View style={styles.container}>
-      <Text>List Screen</Text>
-      <Button onPress={() => { navigation.dispatch(StackActions.pop()); }}>
-        Back
-      </Button>
       <Button
         onPress={() => { navigation.dispatch(StackActions.push("ItemScreen")); }}
       >

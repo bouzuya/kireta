@@ -1,7 +1,6 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
-import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import { Button, Checkbox, FAB, List } from "react-native-paper";
 
 export function TodayScreen(): JSX.Element {
@@ -10,8 +9,6 @@ export function TodayScreen(): JSX.Element {
   const navigation = useNavigation();
   return (
     <View style={styles.container}>
-      <StatusBar style="auto" />
-      <Text>Today Screen</Text>
       <Button
         onPress={() =>
           { navigation.dispatch(StackActions.replace("HistoryScreen")); }
