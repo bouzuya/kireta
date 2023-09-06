@@ -5,7 +5,7 @@ type Config = {
 };
 
 export function useConfig(): Config {
-  const extra: Record<string, any> = Constants.expoConfig?.extra ?? {};
+  const extra: Record<string, unknown> = Constants.expoConfig?.extra ?? {};
   const backendBaseUrl = extra.backendBaseUrl ?? null;
   if (backendBaseUrl === null || typeof backendBaseUrl !== "string")
     throw new Error("BACKEND_BASE_URL is not defined or not a string");

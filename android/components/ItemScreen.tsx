@@ -8,11 +8,11 @@ export function ItemScreen(): JSX.Element {
   return (
     <View style={styles.container}>
       <Text>Item Screen</Text>
-      <Button onPress={() => navigation.dispatch(StackActions.pop())}>
+      <Button onPress={() => { navigation.dispatch(StackActions.pop()); }}>
         Back
       </Button>
       <Button
-        onPress={() => navigation.dispatch(StackActions.push("ListScreen"))}
+        onPress={() => { navigation.dispatch(StackActions.push("ListScreen")); }}
       >
         2023-09-06
       </Button>

@@ -8,16 +8,16 @@ export function ListScreen(): JSX.Element {
   return (
     <View style={styles.container}>
       <Text>List Screen</Text>
-      <Button onPress={() => navigation.dispatch(StackActions.pop())}>
+      <Button onPress={() => { navigation.dispatch(StackActions.pop()); }}>
         Back
       </Button>
       <Button
-        onPress={() => navigation.dispatch(StackActions.push("ItemScreen"))}
+        onPress={() => { navigation.dispatch(StackActions.push("ItemScreen")); }}
       >
         Item 1
       </Button>
       <Button
-        onPress={() => navigation.dispatch(StackActions.push("ItemScreen"))}
+        onPress={() => { navigation.dispatch(StackActions.push("ItemScreen")); }}
       >
         Item 2
       </Button>

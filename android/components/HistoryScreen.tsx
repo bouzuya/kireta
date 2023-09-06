@@ -9,17 +9,17 @@ export function HistoryScreen(): JSX.Element {
     <View style={styles.container}>
       <Text>History Screen</Text>
       <Button
-        onPress={() => navigation.dispatch(StackActions.replace("TodayScreen"))}
+        onPress={() => { navigation.dispatch(StackActions.replace("TodayScreen")); }}
       >
         Today
       </Button>
       <Button
-        onPress={() => navigation.dispatch(StackActions.push("ListScreen"))}
+        onPress={() => { navigation.dispatch(StackActions.push("ListScreen")); }}
       >
         2023-09-06
       </Button>
       <Button
-        onPress={() => navigation.dispatch(StackActions.push("ListScreen"))}
+        onPress={() => { navigation.dispatch(StackActions.push("ListScreen")); }}
       >
         2023-09-05
       </Button>

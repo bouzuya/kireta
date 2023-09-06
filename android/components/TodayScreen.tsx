@@ -14,13 +14,13 @@ export function TodayScreen(): JSX.Element {
       <Text>Today Screen</Text>
       <Button
         onPress={() =>
-          navigation.dispatch(StackActions.replace("HistoryScreen"))
+          { navigation.dispatch(StackActions.replace("HistoryScreen")); }
         }
       >
         History
       </Button>
       <Button
-        onPress={() => navigation.dispatch(StackActions.replace("ItemScreen"))}
+        onPress={() => { navigation.dispatch(StackActions.replace("ItemScreen")); }}
       >
         Item
       </Button>
@@ -32,10 +32,10 @@ export function TodayScreen(): JSX.Element {
             left={(props) => (
               <Checkbox
                 onPress={() =>
-                  setChecked((prev) => ({
+                  { setChecked((prev) => ({
                     ...prev,
                     [item.id]: !prev[item.id],
-                  }))
+                  })); }
                 }
                 status={checked[item.id] ? "checked" : "unchecked"}
                 {...props}
