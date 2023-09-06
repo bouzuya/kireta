@@ -60,7 +60,7 @@ export function WasmContextProvider({ children, uri }: Props): JSX.Element {
       call.resolve(message.result);
       calls.current[message.id] = undefined;
     },
-    [calls]
+    [calls],
   );
   const call = useCallback(
     (name: string, args: unknown[]): Promise<unknown> => {
@@ -76,7 +76,7 @@ export function WasmContextProvider({ children, uri }: Props): JSX.Element {
       ref.current?.postMessage(JSON.stringify(message));
       return deferred.promise;
     },
-    [ref]
+    [ref],
   );
   return (
     <WasmContext.Provider value={{ call, calls }}>
