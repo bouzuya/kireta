@@ -1,23 +1,21 @@
-import { StackActions, useNavigation } from "@react-navigation/native";
+import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import { StackActions } from "@react-navigation/native";
 import React, { useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import { Button, Checkbox, FAB, List } from "react-native-paper";
+import type { BottomTabParamList } from "../types/navigation";
 
-export function TodayScreen(): JSX.Element {
+type Props = BottomTabScreenProps<BottomTabParamList, "Today">;
+
+export function TodayScreen({ navigation }: Props): JSX.Element {
   const [items, setItems] = useState<{ id: number; name: string }[]>([]);
   const [checked, setChecked] = useState<Record<number, boolean>>({});
-  const navigation = useNavigation();
   return (
     <View style={styles.container}>
       <Button
-        onPress={() =>
-          { navigation.dispatch(StackActions.replace("HistoryScreen")); }
-        }
-      >
-        History
-      </Button>
-      <Button
-        onPress={() => { navigation.dispatch(StackActions.replace("ItemScreen")); }}
+        onPress={() => {
+          navigation.dispatch(StackActions.push("Item"));
+        }}
       >
         Item
       </Button>
@@ -28,12 +26,12 @@ export function TodayScreen(): JSX.Element {
           <List.Item
             left={(props) => (
               <Checkbox
-                onPress={() =>
-                  { setChecked((prev) => ({
+                onPress={() => {
+                  setChecked((prev) => ({
                     ...prev,
                     [item.id]: !prev[item.id],
-                  })); }
-                }
+                  }));
+                }}
                 status={checked[item.id] ? "checked" : "unchecked"}
                 {...props}
               />

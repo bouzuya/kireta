@@ -1,14 +1,19 @@
-import { StackActions, useNavigation } from "@react-navigation/native";
+import { StackActions } from "@react-navigation/native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Button } from "react-native-paper";
+import type { NativeStackParamList } from "../types/navigation";
 
-export function ItemScreen(): JSX.Element {
-  const navigation = useNavigation();
+type Props = NativeStackScreenProps<NativeStackParamList, "Item">;
+
+export function ItemScreen({ navigation }: Props): JSX.Element {
   return (
     <View style={styles.container}>
       <Button
-        onPress={() => { navigation.dispatch(StackActions.push("ListScreen")); }}
+        onPress={() => {
+          navigation.dispatch(StackActions.push("List"));
+        }}
       >
         2023-09-06
       </Button>
