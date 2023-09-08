@@ -1,1 +1,5 @@
-export type Item = { id: number; name: string };
+export type ItemId = string;
+export type Item = {
+  id: ItemId;
+  name: string;
+};

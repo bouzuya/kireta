@@ -1,9 +1,10 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
+import { randomUUID } from "expo-crypto";
 import { useCallback, useEffect, useState } from "react";
-import type { Item } from "../types/item";
+import type { Item, ItemId } from "../types/item";
 
 const store: {
-  items: { allIds: number[]; byId: Record<number, Item> };
+  items: { allIds: ItemId[]; byId: Record<ItemId, Item> };
 } = {
   items: {
     allIds: [],
@@ -11,13 +12,21 @@ const store: {
   },
 };
 
+function newItem(props: Omit<Item, "id">): Item {
+  const { name } = props;
+  return {
+    id: randomUUID(),
+    name,
+  };
+}
+
 function addItem(item: Item): void {
   store.items.allIds.push(item.id);
   store.items.byId[item.id] = item;
 }
 
 export function useTodayScreen(): {
-  checked: Record<number, boolean>;
+  checked: Record<ItemId, boolean>;
   handleButtonOnPress: () => void;
   handleFABOnPress: () => void;
   handleListItemOnPress: (item: Item) => () => void;
@@ -25,7 +34,7 @@ export function useTodayScreen(): {
 } {
   const navigation = useNavigation();
   const [items, setItems] = useState<Item[] | null>(null);
-  const [checked, setChecked] = useState<Record<number, boolean>>({});
+  const [checked, setChecked] = useState<Record<ItemId, boolean>>({});
 
   useEffect(() => {
     if (items !== null) return;
@@ -48,7 +57,7 @@ export function useTodayScreen(): {
 
   const handleFABOnPress = useCallback(() => {
     if (items === null) return;
-    const item = { id: items.length, name: `Item ${items.length}` };
+    const item = newItem({ name: `Item ${items.length}` });
     addItem(item);
     setItems([...items, item]);
   }, [items]);
