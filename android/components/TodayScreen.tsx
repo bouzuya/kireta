@@ -24,7 +24,7 @@ export function TodayScreen(_: Props): JSX.Element {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <ListItem
-            checked={checked[item.id]}
+            checked={checked[item.id] ?? false}
             item={item}
             onPress={handleListItemOnPress(item)}
           />
