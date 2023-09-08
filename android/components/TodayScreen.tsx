@@ -4,7 +4,7 @@ import { FlatList, StyleSheet, View } from "react-native";
 import { Button, FAB } from "react-native-paper";
 import type { BottomTabParamList } from "../types/navigation";
 import { ListItem } from "./TodayScreen/components/ListItem";
-import { useTodayScreen } from "./TodayScreen/hooks";
+import { useTodayScreen } from "./TodayScreen/hooks/useTodayScreen";
 
 type Props = BottomTabScreenProps<BottomTabParamList, "Today">;
 
