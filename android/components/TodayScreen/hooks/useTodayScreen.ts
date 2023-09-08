@@ -1,53 +1,15 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
-import { randomUUID } from "expo-crypto";
 import { useCallback, useEffect, useState } from "react";
-import type { CheckList } from "../types/check_list";
-import type { DateString } from "../types/date_string";
-import type { Item, ItemId } from "../types/item";
-import type { Store } from "../types/store";
+import { newCheckList, type CheckList } from "../types/check_list";
+import { newItem, type Item, type ItemId } from "../types/item";
+import {
+  addCheckList,
+  addItem,
+  newStore,
+  updateCheckList,
+} from "../types/store";
 
-const store: Store = {
-  checkLists: {},
-  items: {
-    allIds: [],
-    byId: {},
-  },
-};
-
-function addCheckList(checkList: CheckList): void {
-  if (store.checkLists[checkList.date] !== undefined) return;
-  store.checkLists[checkList.date] = checkList;
-}
-
-function newCheckList({ date }: { date: DateString }): CheckList {
-  return {
-    checked: {},
-    date,
-  };
-}
-
-function updateCheckList(
-  date: DateString,
-  itemId: ItemId,
-  checked: boolean
-): void {
-  const checkList = store.checkLists[date];
-  if (checkList === undefined) return;
-  checkList.checked[itemId] = checked;
-}
-
-function newItem(props: Omit<Item, "id">): Item {
-  const { name } = props;
-  return {
-    id: randomUUID(),
-    name,
-  };
-}
-
-function addItem(item: Item): void {
-  store.items.allIds.push(item.id);
-  store.items.byId[item.id] = item;
-}
+const store = newStore();
 
 export function useTodayScreen(): {
   checked: Record<ItemId, boolean>;
@@ -73,7 +35,7 @@ export function useTodayScreen(): {
     if (checkList !== null) return;
     const today = new Date().toISOString().slice(0, 10);
     const created = store.checkLists[today] ?? newCheckList({ date: today });
-    addCheckList(created);
+    addCheckList(store, created);
     setCheckList({ ...created });
   }, [checkList]);
 
@@ -84,7 +46,12 @@ export function useTodayScreen(): {
   const handleListItemOnPress = useCallback(
     (item: Item) => () => {
       if (checkList === null) return;
-      updateCheckList(checkList.date, item.id, !checkList.checked[item.id]);
+      updateCheckList(
+        store,
+        checkList.date,
+        item.id,
+        !checkList.checked[item.id]
+      );
       setCheckList({ ...checkList });
     },
     [checkList]
@@ -93,7 +60,7 @@ export function useTodayScreen(): {
   const handleFABOnPress = useCallback(() => {
     if (items === null) return;
     const item = newItem({ name: `Item ${items.length}` });
-    addItem(item);
+    addItem(store, item);
     setItems([...items, item]);
   }, [items]);
 
