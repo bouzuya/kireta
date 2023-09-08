@@ -1,7 +1,6 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
 import { useCallback, useEffect, useState } from "react";
-
-type Item = { id: number; name: string };
+import type { Item } from "../types/item";
 
 const store: {
   items: { allIds: number[]; byId: Record<number, Item> };
@@ -19,9 +18,9 @@ function addItem(item: Item): void {
 
 export function useTodayScreen(): {
   checked: Record<number, boolean>;
-  handleCheckboxOnPress: (item: Item) => () => void;
-  handleFABOnPress: () => void;
   handleButtonOnPress: () => void;
+  handleFABOnPress: () => void;
+  handleListItemOnPress: (item: Item) => () => void;
   items: Item[] | null;
 } {
   const navigation = useNavigation();
@@ -37,7 +36,7 @@ export function useTodayScreen(): {
     navigation.dispatch(StackActions.push("Item"));
   }, [navigation]);
 
-  const handleCheckboxOnPress = useCallback(
+  const handleListItemOnPress = useCallback(
     (item: Item) => () => {
       setChecked((prev) => ({
         ...prev,
@@ -57,8 +56,8 @@ export function useTodayScreen(): {
   return {
     checked,
     handleButtonOnPress,
-    handleCheckboxOnPress,
     handleFABOnPress,
+    handleListItemOnPress,
     items,
   };
 }
