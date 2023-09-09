@@ -1,13 +1,12 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "../../StoreContext";
-import { newCheckList, type CheckList } from "../types/check_list";
 import { newItem, type Item, type ItemId } from "../types/item";
 import {
-  addCheckList,
   addItem,
-  getItems,
-  updateCheckList,
+  getCheckedItemIdsByDate,
+  getItems as storeGetItems,
+  setChecked as storeSetChecked,
 } from "../types/store";
 
 export function useTodayScreen(): {
@@ -20,20 +19,19 @@ export function useTodayScreen(): {
   const { store } = useStore();
   const navigation = useNavigation();
   const [items, setItems] = useState<Item[] | null>(null);
-  const [checkList, setCheckList] = useState<CheckList | null>(null);
+  const [checked, setChecked] = useState<Record<ItemId, boolean> | null>(null);
 
   useEffect(() => {
     if (items !== null) return;
-    setItems(getItems(store));
+    setItems(storeGetItems(store));
   }, [items, store]);
 
   useEffect(() => {
-    if (checkList !== null) return;
+    if (checked !== null) return;
     const today = new Date().toISOString().slice(0, 10);
-    const created = store.checkLists[today] ?? newCheckList({ date: today });
-    addCheckList(store, created);
-    setCheckList({ ...created });
-  }, [checkList, store]);
+    const itemIds = getCheckedItemIdsByDate(store, today);
+    setChecked(Object.fromEntries(itemIds.map((id) => [id, true])));
+  }, [checked, store]);
 
   const handleButtonOnPress = useCallback(() => {
     navigation.dispatch(StackActions.push("Item"));
@@ -41,16 +39,14 @@ export function useTodayScreen(): {
 
   const handleListItemOnPress = useCallback(
     (item: Item) => () => {
-      if (checkList === null) return;
-      updateCheckList(
-        store,
-        checkList.date,
-        item.id,
-        !checkList.checked[item.id]
-      );
-      setCheckList({ ...checkList });
+      if (checked === null) return;
+      // TODO: today
+      const today = new Date().toISOString().slice(0, 10);
+      storeSetChecked(store, today, item.id, !checked[item.id]);
+      checked[item.id] = !checked[item.id];
+      setChecked({ ...checked });
     },
-    [checkList, store]
+    [checked, store]
   );
 
   const handleFABOnPress = useCallback(() => {
@@ -61,7 +57,7 @@ export function useTodayScreen(): {
   }, [items, store]);
 
   return {
-    checked: checkList?.checked ?? {},
+    checked: checked ?? {},
     handleButtonOnPress,
     handleFABOnPress,
     handleListItemOnPress,

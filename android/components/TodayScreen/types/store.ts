@@ -1,10 +1,14 @@
-import type { CheckList } from "./check_list";
 import type { DateString } from "./date_string";
 import type { Item, ItemId } from "./item";
 
 export type Store = {
   // 選択した項目の一覧
-  checkLists: Record<DateString, CheckList>;
+  checked: {
+    // 日別
+    byDate: Record<DateString, Record<ItemId, boolean>>;
+    // 項目別
+    byItem: Record<ItemId, Record<DateString, boolean>>;
+  };
   // 選択可能な項目の一覧
   items: {
     allIds: ItemId[];
@@ -12,24 +16,43 @@ export type Store = {
   };
 };
 
-export function newStore(): Store {
-  return {
-    checkLists: {},
-    items: {
-      allIds: [],
-      byId: {},
-    },
-  };
-}
-
-export function addCheckList(mutSelf: Store, checkList: CheckList): void {
-  if (mutSelf.checkLists[checkList.date] !== undefined) return;
-  mutSelf.checkLists[checkList.date] = checkList;
-}
-
 export function addItem(mutSelf: Store, item: Item): void {
+  if (mutSelf.items.byId[item.id] !== undefined)
+    throw new Error("already exists");
   mutSelf.items.allIds.push(item.id);
   mutSelf.items.byId[item.id] = item;
+}
+
+export function getChecked(
+  self: Store,
+  date: DateString,
+  itemId: ItemId
+): boolean {
+  return self.checked.byDate[date]?.[itemId] ?? false;
+}
+
+export function getCheckedItemIdsByDate(
+  self: Store,
+  date: DateString
+): ItemId[] {
+  const byDate = self.checked.byDate[date] ?? {};
+  return Object.entries(byDate)
+    .filter(([_, checked]: [ItemId, boolean]): boolean => checked)
+    .map(([id, _]: [ItemId, boolean]): ItemId => id);
+}
+
+export function getCheckedDatesByItemId(
+  self: Store,
+  itemId: ItemId
+): DateString[] {
+  const byItem = self.checked.byItem[itemId] ?? {};
+  return Object.entries(byItem)
+    .filter(([_, checked]: [DateString, boolean]): boolean => checked)
+    .map(([date, _]: [DateString, boolean]): DateString => date);
+}
+
+export function getItem(self: Store, itemId: ItemId): Item | null {
+  return self.items.byId[itemId] ?? null;
 }
 
 export function getItems(self: Store): Item[] {
@@ -38,14 +61,30 @@ export function getItems(self: Store): Item[] {
     .filter((item: Item | undefined): item is Item => item !== undefined);
 }
 
-// TODO: Extract updateCheckList to check_list mod
-export function updateCheckList(
+export function newStore(): Store {
+  return {
+    checked: {
+      byDate: {},
+      byItem: {},
+    },
+    items: {
+      allIds: [],
+      byId: {},
+    },
+  };
+}
+
+export function setChecked(
   mutSelf: Store,
   date: DateString,
   itemId: ItemId,
   checked: boolean
 ): void {
-  const checkList = mutSelf.checkLists[date];
-  if (checkList === undefined) return;
-  checkList.checked[itemId] = checked;
+  // itemId が items に存在しない可能性はあるが、検査しない
+  const byDate = mutSelf.checked.byDate[date] ?? {};
+  byDate[itemId] = checked;
+  mutSelf.checked.byDate[date] = byDate;
+  const byItem = mutSelf.checked.byItem[itemId] ?? {};
+  byItem[date] = checked;
+  mutSelf.checked.byItem[itemId] = byItem;
 }
