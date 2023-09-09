@@ -32,6 +32,12 @@ export function addItem(mutSelf: Store, item: Item): void {
   mutSelf.items.byId[item.id] = item;
 }
 
+export function getItems(self: Store): Item[] {
+  return self.items.allIds
+    .map((id: ItemId): Item | undefined => self.items.byId[id])
+    .filter((item: Item | undefined): item is Item => item !== undefined);
+}
+
 // TODO: Extract updateCheckList to check_list mod
 export function updateCheckList(
   mutSelf: Store,
