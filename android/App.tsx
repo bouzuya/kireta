@@ -4,6 +4,7 @@ import React from "react";
 import { PaperProvider } from "react-native-paper";
 import { ItemScreen } from "./components/ItemScreen";
 import { ListScreen } from "./components/ListScreen";
+import { StoreContextProvider } from "./components/StoreContext";
 import { TabScreen } from "./components/TabScreen";
 import type { NativeStackParamList } from "./types/navigation";
 
@@ -13,17 +14,19 @@ const Stack = createNativeStackNavigator<NativeStackParamList>();
 export default function App(): JSX.Element {
   return (
     <PaperProvider>
-      <NavigationContainer>
-        <Stack.Navigator initialRouteName="Tab">
-          <Stack.Screen name="Item" component={ItemScreen} />
-          <Stack.Screen name="List" component={ListScreen} />
-          <Stack.Screen
-            name="Tab"
-            component={TabScreen}
-            options={{ headerShown: false }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <StoreContextProvider>
+        <NavigationContainer>
+          <Stack.Navigator initialRouteName="Tab">
+            <Stack.Screen name="Item" component={ItemScreen} />
+            <Stack.Screen name="List" component={ListScreen} />
+            <Stack.Screen
+              name="Tab"
+              component={TabScreen}
+              options={{ headerShown: false }}
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </StoreContextProvider>
     </PaperProvider>
   );
 }

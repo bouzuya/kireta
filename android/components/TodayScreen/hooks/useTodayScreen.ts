@@ -1,15 +1,14 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
 import { useCallback, useEffect, useState } from "react";
+import { useStore } from "../../StoreContext";
 import { newCheckList, type CheckList } from "../types/check_list";
 import { newItem, type Item, type ItemId } from "../types/item";
 import {
   addCheckList,
   addItem,
-  newStore,
+  getItems,
   updateCheckList,
 } from "../types/store";
-
-const store = newStore();
 
 export function useTodayScreen(): {
   checked: Record<ItemId, boolean>;
@@ -18,18 +17,15 @@ export function useTodayScreen(): {
   handleListItemOnPress: (item: Item) => () => void;
   items: Item[] | null;
 } {
+  const { store } = useStore();
   const navigation = useNavigation();
   const [items, setItems] = useState<Item[] | null>(null);
   const [checkList, setCheckList] = useState<CheckList | null>(null);
 
   useEffect(() => {
     if (items !== null) return;
-    setItems(
-      store.items.allIds
-        .map((id: ItemId): Item | undefined => store.items.byId[id])
-        .filter((item: Item | undefined): item is Item => item !== undefined)
-    );
-  }, [items]);
+    setItems(getItems(store));
+  }, [items, store]);
 
   useEffect(() => {
     if (checkList !== null) return;
@@ -37,7 +33,7 @@ export function useTodayScreen(): {
     const created = store.checkLists[today] ?? newCheckList({ date: today });
     addCheckList(store, created);
     setCheckList({ ...created });
-  }, [checkList]);
+  }, [checkList, store]);
 
   const handleButtonOnPress = useCallback(() => {
     navigation.dispatch(StackActions.push("Item"));
@@ -54,7 +50,7 @@ export function useTodayScreen(): {
       );
       setCheckList({ ...checkList });
     },
-    [checkList]
+    [checkList, store]
   );
 
   const handleFABOnPress = useCallback(() => {
@@ -62,7 +58,7 @@ export function useTodayScreen(): {
     const item = newItem({ name: `Item ${items.length}` });
     addItem(store, item);
     setItems([...items, item]);
-  }, [items]);
+  }, [items, store]);
 
   return {
     checked: checkList?.checked ?? {},
