@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/components/StoreContext";
 import type { DateString } from "@/types/date_string";
-import { getAllDates } from "@/types/store";
+import { findAllCheckListDates } from "@/types/store";
 
 export function useHistoryScreen(): {
   dates: DateString[] | null;
@@ -11,7 +11,7 @@ export function useHistoryScreen(): {
 
   useEffect(() => {
     if (dates !== null) return;
-    setDates(getAllDates(store));
+    setDates(findAllCheckListDates(store));
   }, [dates, store]);
 
   return {
