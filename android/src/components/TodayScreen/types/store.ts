@@ -20,6 +20,7 @@ export type Command =
 export type Store = {
   // 選択した項目の一覧
   checked: {
+    allDates: DateString[];
     // 日別
     byDate: Record<DateString, Record<ItemId, boolean>>;
     // 項目別
@@ -31,6 +32,10 @@ export type Store = {
     byId: Record<ItemId, Item>;
   };
 };
+
+export function getAllDates(self: Store): DateString[] {
+  return [...self.checked.allDates];
+}
 
 export function getChecked(
   self: Store,
@@ -87,8 +92,9 @@ export function handle(mutSelf: Store, command: Command): void {
 }
 
 export function newStore(): Store {
-  return {
+  const store = {
     checked: {
+      allDates: [],
       byDate: {},
       byItem: {},
     },
@@ -97,6 +103,22 @@ export function newStore(): Store {
       byId: {},
     },
   };
+
+  // DEBUG
+  addItem(store, {
+    id: "c118aaf5-8149-442e-b951-b7b00bc67b89",
+    name: "項目1",
+  });
+  addItem(store, {
+    id: "052061f5-6938-4b62-952e-2cf2a2b8847e",
+    name: "項目2",
+  });
+  setChecked(store, "2023-09-07", "c118aaf5-8149-442e-b951-b7b00bc67b89", true);
+  setChecked(store, "2023-09-08", "c118aaf5-8149-442e-b951-b7b00bc67b89", true);
+  setChecked(store, "2023-09-09", "c118aaf5-8149-442e-b951-b7b00bc67b89", true);
+  setChecked(store, "2023-09-09", "052061f5-6938-4b62-952e-2cf2a2b8847e", true);
+
+  return store;
 }
 
 function addItem(mutSelf: Store, item: Item): void {
@@ -112,6 +134,11 @@ function setChecked(
   itemId: ItemId,
   checked: boolean
 ): void {
+  if (mutSelf.checked.byDate[date] === undefined) {
+    // TODO: deletion
+    mutSelf.checked.allDates.push(date);
+    mutSelf.checked.byDate[date] = {};
+  }
   // itemId が items に存在しない可能性はあるが、検査しない
   const byDate = mutSelf.checked.byDate[date] ?? {};
   byDate[itemId] = checked;
