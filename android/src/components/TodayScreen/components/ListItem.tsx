@@ -1,5 +1,5 @@
 import { Checkbox, List } from "react-native-paper";
-import type { Item } from "../types/item";
+import type { Item } from "@/components/TodayScreen/types/item";
 
 type Props = {
   checked: boolean;

@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { newStore, type Store } from "./TodayScreen/types/store";
+import { newStore, type Store } from "@/components/TodayScreen/types/store";
 
 type StoreContextValue = {
   store: Store;

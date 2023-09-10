@@ -6,7 +6,10 @@
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
         "ms-azuretools.vscode-docker"
-      ]
+      ],
+      "settings": {
+        "typescript.preferences.importModuleSpecifier": "non-relative"
+      }
     }
   },
   "dockerComposeFile": "../compose.yaml",

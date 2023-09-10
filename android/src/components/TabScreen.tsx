@@ -4,12 +4,12 @@ import { TabActions } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React from "react";
 import { BottomNavigation } from "react-native-paper";
+import { HistoryScreen } from "@/components/HistoryScreen";
+import { TodayScreen } from "@/components/TodayScreen";
 import type {
   BottomTabParamList,
   NativeStackParamList,
-} from "../types/navigation";
-import { HistoryScreen } from "./HistoryScreen";
-import { TodayScreen } from "./TodayScreen";
+} from "@/types/navigation";
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
@@ -21,7 +21,7 @@ export function TabScreen(_: Props): JSX.Element {
       tabBar={({ navigation, state, descriptors, insets }) => (
         <BottomNavigation.Bar
           getLabelText={({ route }): string | undefined => {
-            const { tabBarLabel } = descriptors[route.key].options;
+            const { tabBarLabel } = descriptors[route.key]?.options ?? {};
             return typeof tabBarLabel === "string" ? tabBarLabel : undefined;
           }}
           navigationState={state}
@@ -39,7 +39,7 @@ export function TabScreen(_: Props): JSX.Element {
             }
           }}
           renderIcon={({ color, focused, route }): React.ReactNode => {
-            const { tabBarIcon } = descriptors[route.key].options;
+            const { tabBarIcon } = descriptors[route.key]?.options ?? {};
             return tabBarIcon === undefined
               ? null
               : tabBarIcon({ focused, color, size: 24 });

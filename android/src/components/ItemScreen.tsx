@@ -3,26 +3,19 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Button } from "react-native-paper";
-import type { NativeStackParamList } from "../types/navigation";
+import type { NativeStackParamList } from "@/types/navigation";
 
-type Props = NativeStackScreenProps<NativeStackParamList, "List">;
+type Props = NativeStackScreenProps<NativeStackParamList, "Item">;
 
-export function ListScreen({ navigation }: Props): JSX.Element {
+export function ItemScreen({ navigation }: Props): JSX.Element {
   return (
     <View style={styles.container}>
       <Button
         onPress={() => {
-          navigation.dispatch(StackActions.push("Item"));
+          navigation.dispatch(StackActions.push("List"));
         }}
       >
-        Item 1
-      </Button>
-      <Button
-        onPress={() => {
-          navigation.dispatch(StackActions.push("Item"));
-        }}
-      >
-        Item 2
+        2023-09-06
       </Button>
     </View>
   );

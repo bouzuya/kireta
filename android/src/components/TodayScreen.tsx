@@ -2,9 +2,9 @@ import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import React from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import { Button, FAB } from "react-native-paper";
-import type { BottomTabParamList } from "../types/navigation";
-import { ListItem } from "./TodayScreen/components/ListItem";
-import { useTodayScreen } from "./TodayScreen/hooks/useTodayScreen";
+import { ListItem } from "@/components/TodayScreen/components/ListItem";
+import { useTodayScreen } from "@/components/TodayScreen/hooks/useTodayScreen";
+import type { BottomTabParamList } from "@/types/navigation";
 
 type Props = BottomTabScreenProps<BottomTabParamList, "Today">;
 

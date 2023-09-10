@@ -1,28 +1,28 @@
-import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { StackActions } from "@react-navigation/native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Button } from "react-native-paper";
-import type { BottomTabParamList } from "../types/navigation";
+import type { NativeStackParamList } from "@/types/navigation";
 
-type Props = BottomTabScreenProps<BottomTabParamList, "History">;
+type Props = NativeStackScreenProps<NativeStackParamList, "List">;
 
-export function HistoryScreen({ navigation }: Props): JSX.Element {
+export function ListScreen({ navigation }: Props): JSX.Element {
   return (
     <View style={styles.container}>
       <Button
         onPress={() => {
-          navigation.dispatch(StackActions.push("List"));
+          navigation.dispatch(StackActions.push("Item"));
         }}
       >
-        2023-09-06
+        Item 1
       </Button>
       <Button
         onPress={() => {
-          navigation.dispatch(StackActions.push("List"));
+          navigation.dispatch(StackActions.push("Item"));
         }}
       >
-        2023-09-05
+        Item 2
       </Button>
     </View>
   );

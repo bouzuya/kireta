@@ -1,12 +1,12 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
 import { useCallback, useEffect, useState } from "react";
-import { useStore } from "../../StoreContext";
 import { newItem, type Item, type ItemId } from "../types/item";
+import { useStore } from "@/components/StoreContext";
 import {
   getCheckedItemIdsByDate,
   getItems as storeGetItems,
   handle,
-} from "../types/store";
+} from "@/components/TodayScreen/types/store";
 
 export function useTodayScreen(): {
   checked: Record<ItemId, boolean>;

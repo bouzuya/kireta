@@ -1,5 +1,5 @@
-import type { DateString } from "./date_string";
-import type { Item, ItemId } from "./item";
+import type { DateString } from "@/components/TodayScreen/types/date_string";
+import type { Item, ItemId } from "@/components/TodayScreen/types/item";
 
 export type Command =
   | {
