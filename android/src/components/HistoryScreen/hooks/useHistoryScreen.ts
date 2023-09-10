@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/components/StoreContext";
-import type { DateString } from "@/components/TodayScreen/types/date_string";
-import { getAllDates } from "@/components/TodayScreen/types/store";
+import type { DateString } from "@/types/date_string";
+import { getAllDates } from "@/types/store";
 
 export function useHistoryScreen(): {
   dates: DateString[] | null;
