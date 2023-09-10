@@ -3,10 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useStore } from "../../StoreContext";
 import { newItem, type Item, type ItemId } from "../types/item";
 import {
-  addItem,
   getCheckedItemIdsByDate,
   getItems as storeGetItems,
-  setChecked as storeSetChecked,
+  handle,
 } from "../types/store";
 
 export function useTodayScreen(): {
@@ -42,7 +41,14 @@ export function useTodayScreen(): {
       if (checked === null) return;
       // TODO: today
       const today = new Date().toISOString().slice(0, 10);
-      storeSetChecked(store, today, item.id, !checked[item.id]);
+      handle(store, {
+        payload: {
+          checked: !checked[item.id],
+          date: today,
+          itemId: item.id,
+        },
+        type: "setChecked",
+      });
       checked[item.id] = !checked[item.id];
       setChecked({ ...checked });
     },
@@ -52,7 +58,12 @@ export function useTodayScreen(): {
   const handleFABOnPress = useCallback(() => {
     if (items === null) return;
     const item = newItem({ name: `Item ${items.length}` });
-    addItem(store, item);
+    handle(store, {
+      payload: {
+        item,
+      },
+      type: "addItem",
+    });
     setItems([...items, item]);
   }, [items, store]);
 

@@ -1,6 +1,22 @@
 import type { DateString } from "./date_string";
 import type { Item, ItemId } from "./item";
 
+export type Command =
+  | {
+      payload: {
+        item: Item;
+      };
+      type: "addItem";
+    }
+  | {
+      payload: {
+        checked: boolean;
+        date: DateString;
+        itemId: ItemId;
+      };
+      type: "setChecked";
+    };
+
 export type Store = {
   // 選択した項目の一覧
   checked: {
@@ -15,13 +31,6 @@ export type Store = {
     byId: Record<ItemId, Item>;
   };
 };
-
-export function addItem(mutSelf: Store, item: Item): void {
-  if (mutSelf.items.byId[item.id] !== undefined)
-    throw new Error("already exists");
-  mutSelf.items.allIds.push(item.id);
-  mutSelf.items.byId[item.id] = item;
-}
 
 export function getChecked(
   self: Store,
@@ -61,6 +70,22 @@ export function getItems(self: Store): Item[] {
     .filter((item: Item | undefined): item is Item => item !== undefined);
 }
 
+export function handle(mutSelf: Store, command: Command): void {
+  switch (command.type) {
+    case "addItem":
+      addItem(mutSelf, command.payload.item);
+      break;
+    case "setChecked":
+      setChecked(
+        mutSelf,
+        command.payload.date,
+        command.payload.itemId,
+        command.payload.checked
+      );
+      break;
+  }
+}
+
 export function newStore(): Store {
   return {
     checked: {
@@ -74,7 +99,14 @@ export function newStore(): Store {
   };
 }
 
-export function setChecked(
+function addItem(mutSelf: Store, item: Item): void {
+  if (mutSelf.items.byId[item.id] !== undefined)
+    throw new Error("already exists");
+  mutSelf.items.allIds.push(item.id);
+  mutSelf.items.byId[item.id] = item;
+}
+
+function setChecked(
   mutSelf: Store,
   date: DateString,
   itemId: ItemId,
