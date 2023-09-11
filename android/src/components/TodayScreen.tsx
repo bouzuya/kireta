@@ -10,7 +10,6 @@ type Props = BottomTabScreenProps<BottomTabParamList, "Today">;
 
 export function TodayScreen(_: Props): JSX.Element {
   const {
-    checked,
     handleButtonOnPress,
     handleFABOnPress,
     handleListItemOnPress,
@@ -24,7 +23,7 @@ export function TodayScreen(_: Props): JSX.Element {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <ListItem
-            checked={checked[item.id] ?? false}
+            checked={item.checked}
             item={item}
             onPress={handleListItemOnPress(item)}
           />
