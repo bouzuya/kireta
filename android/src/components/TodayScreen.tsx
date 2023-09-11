@@ -12,7 +12,8 @@ export function TodayScreen(_: Props): JSX.Element {
   const {
     handleButtonOnPress,
     handleFABOnPress,
-    handleListItemOnPress,
+    handleListItemOnCheckboxPress,
+    handleListItemOnItemPress,
     items,
   } = useTodayScreen();
   return (
@@ -25,7 +26,8 @@ export function TodayScreen(_: Props): JSX.Element {
           <ListItem
             checked={item.checked}
             item={item}
-            onPress={handleListItemOnPress(item)}
+            onCheckboxPress={handleListItemOnCheckboxPress(item)}
+            onItemPress={handleListItemOnItemPress(item)}
           />
         )}
       />

@@ -115,7 +115,8 @@ function handleScreenState(
 export function useTodayScreen(): {
   handleButtonOnPress: () => void;
   handleFABOnPress: () => void;
-  handleListItemOnPress: (item: Item) => () => void;
+  handleListItemOnCheckboxPress: (item: Item) => () => void;
+  handleListItemOnItemPress: (item: Item) => () => void;
   items: ItemWithChecked[] | null;
 } {
   const [screenState, setScreenState] = useState<ScreenState>({
@@ -132,10 +133,29 @@ export function useTodayScreen(): {
     navigation.dispatch(StackActions.push("Item"));
   }, [navigation]);
 
-  const handleListItemOnPress = useCallback(
+  const handleFABOnPress = useCallback(() => {
+    if (screenState.type !== "itemWithCheckedsLoaded") return;
+    const items = screenState.itemWithCheckeds;
+    const item = newItem({ name: `Item ${items.length}` });
+
+    // update store
+    handle(store, {
+      payload: {
+        item,
+      },
+      type: "addItem",
+    });
+
+    // update state
+    setScreenState({
+      ...screenState,
+      itemWithCheckeds: [...items, { ...item, checked: false }],
+    });
+  }, [screenState, store]);
+
+  const handleListItemOnCheckboxPress = useCallback(
     (item: Item) => () => {
       if (screenState.type !== "itemWithCheckedsLoaded") return;
-      console.log(screenState);
       const itemId = item.id;
       const items = screenState.itemWithCheckeds;
       const checked = !(items.find((i) => i.id === itemId)?.checked ?? false);
@@ -159,30 +179,19 @@ export function useTodayScreen(): {
     [screenState, store]
   );
 
-  const handleFABOnPress = useCallback(() => {
-    if (screenState.type !== "itemWithCheckedsLoaded") return;
-    const items = screenState.itemWithCheckeds;
-    const item = newItem({ name: `Item ${items.length}` });
-
-    // update store
-    handle(store, {
-      payload: {
-        item,
-      },
-      type: "addItem",
-    });
-
-    // update state
-    setScreenState({
-      ...screenState,
-      itemWithCheckeds: [...items, { ...item, checked: false }],
-    });
-  }, [screenState, store]);
+  const handleListItemOnItemPress = useCallback(
+    (item: Item) => () => {
+      if (screenState.type !== "itemWithCheckedsLoaded") return;
+      navigation.dispatch(StackActions.push("Item", { itemId: item.id }));
+    },
+    [navigation, screenState.type]
+  );
 
   return {
     handleButtonOnPress,
     handleFABOnPress,
-    handleListItemOnPress,
+    handleListItemOnCheckboxPress,
+    handleListItemOnItemPress,
     items:
       screenState.type === "itemWithCheckedsLoaded"
         ? screenState.itemWithCheckeds

@@ -4,19 +4,26 @@ import type { Item } from "@/types/item";
 type Props = {
   checked: boolean;
   item: Item;
-  onPress: () => void;
+  onCheckboxPress: () => void;
+  onItemPress: () => void;
 };
 
-export function ListItem({ checked, item, onPress }: Props): JSX.Element {
+export function ListItem({
+  checked,
+  item,
+  onCheckboxPress,
+  onItemPress,
+}: Props): JSX.Element {
   return (
     <List.Item
       left={(props) => (
         <Checkbox
-          onPress={onPress}
+          onPress={onCheckboxPress}
           status={checked ? "checked" : "unchecked"}
           {...props}
         />
       )}
+      onPress={onItemPress}
       title={item.name}
     />
   );
