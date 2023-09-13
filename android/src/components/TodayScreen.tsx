@@ -1,7 +1,7 @@
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import React from "react";
 import { FlatList, StyleSheet, View } from "react-native";
-import { Button, FAB } from "react-native-paper";
+import { FAB } from "react-native-paper";
 import { ListItem } from "@/components/TodayScreen/components/ListItem";
 import { useTodayScreen } from "@/components/TodayScreen/hooks/useTodayScreen";
 import type { BottomTabParamList } from "@/types/navigation";
@@ -10,7 +10,6 @@ type Props = BottomTabScreenProps<BottomTabParamList, "Today">;
 
 export function TodayScreen(_: Props): JSX.Element {
   const {
-    handleButtonOnPress,
     handleFABOnPress,
     handleListItemOnCheckboxPress,
     handleListItemOnItemPress,
@@ -18,7 +17,6 @@ export function TodayScreen(_: Props): JSX.Element {
   } = useTodayScreen();
   return (
     <View style={styles.container}>
-      <Button onPress={handleButtonOnPress}>Item</Button>
       <FlatList
         data={items}
         keyExtractor={(item) => item.id.toString()}

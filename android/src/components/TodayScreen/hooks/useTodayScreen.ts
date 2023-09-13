@@ -113,7 +113,6 @@ function handleScreenState(
 }
 
 export function useTodayScreen(): {
-  handleButtonOnPress: () => void;
   handleFABOnPress: () => void;
   handleListItemOnCheckboxPress: (item: Item) => () => void;
   handleListItemOnItemPress: (item: Item) => () => void;
@@ -128,10 +127,6 @@ export function useTodayScreen(): {
   useEffect(() => {
     setScreenState(handleScreenState(store, screenState));
   }, [screenState, store]);
-
-  const handleButtonOnPress = useCallback(() => {
-    navigation.dispatch(StackActions.push("Item"));
-  }, [navigation]);
 
   const handleFABOnPress = useCallback(() => {
     if (screenState.type !== "itemWithCheckedsLoaded") return;
@@ -188,7 +183,6 @@ export function useTodayScreen(): {
   );
 
   return {
-    handleButtonOnPress,
     handleFABOnPress,
     handleListItemOnCheckboxPress,
     handleListItemOnItemPress,
