@@ -1,3 +1,4 @@
+import type { CheckListId } from "@/types/check_list";
 import type { ItemId } from "@/types/item";
 
 export type BottomTabParamList = {
@@ -7,6 +8,6 @@ export type BottomTabParamList = {
 
 export type NativeStackParamList = {
   Item: { itemId: ItemId };
-  List: undefined;
+  List: { checkListId: CheckListId };
   Tab: undefined;
 };
