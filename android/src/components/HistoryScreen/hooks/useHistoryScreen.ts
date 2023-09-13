@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/components/StoreContext";
-import type { DateString } from "@/types/date_string";
-import { findAllCheckListDates } from "@/types/store";
+import type { CheckList } from "@/types/check_list";
+import { findAllCheckLists } from "@/types/store";
 
 export function useHistoryScreen(): {
-  dates: DateString[] | null;
+  checkLists: CheckList[] | null;
 } {
-  const [dates, setDates] = useState<DateString[] | null>(null);
+  const [checkLists, setCheckLists] = useState<CheckList[] | null>(null);
   const { store } = useStore();
 
   useEffect(() => {
-    if (dates !== null) return;
-    setDates(findAllCheckListDates(store));
-  }, [dates, store]);
+    if (checkLists !== null) return;
+    setCheckLists(findAllCheckLists(store));
+  }, [checkLists, store]);
 
   return {
-    dates,
+    checkLists,
   };
 }

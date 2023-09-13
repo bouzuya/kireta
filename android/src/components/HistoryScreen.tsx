@@ -9,19 +9,21 @@ import type { BottomTabParamList } from "@/types/navigation";
 type Props = BottomTabScreenProps<BottomTabParamList, "History">;
 
 export function HistoryScreen({ navigation }: Props): JSX.Element {
-  const { dates } = useHistoryScreen();
+  const { checkLists } = useHistoryScreen();
   return (
     <View style={styles.container}>
       <FlatList
-        data={dates}
-        keyExtractor={(item) => item}
+        data={checkLists}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <Button
             onPress={() => {
-              navigation.dispatch(StackActions.push("List"));
+              navigation.dispatch(
+                StackActions.push("List", { checkListId: item.id })
+              );
             }}
           >
-            {item}
+            {item.date}
           </Button>
         )}
       />
