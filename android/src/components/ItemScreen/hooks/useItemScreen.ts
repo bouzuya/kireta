@@ -91,6 +91,8 @@ function handleScreenState(
         type: "loaded",
       };
     }
+    case "loaded":
+      return screenState;
     default:
       throw new Error("assert unknown screenState.type");
   }
