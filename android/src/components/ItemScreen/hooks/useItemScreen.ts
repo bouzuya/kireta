@@ -76,7 +76,8 @@ function handleScreenState(
       );
       const checkLists = checkListIds
         .map((id): CheckList | null => findCheckList(store, id))
-        .filter((checkList): checkList is CheckList => checkList !== null);
+        .filter((checkList): checkList is CheckList => checkList !== null)
+        .sort(({ date: a }, { date: b }) => (a < b ? 1 : a === b ? 0 : -1));
       const days: number | null =
         checkLists[0] === undefined
           ? null
