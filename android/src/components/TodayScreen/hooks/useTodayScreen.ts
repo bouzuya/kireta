@@ -1,19 +1,22 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "@/components/StoreContext";
-import type { CheckListId } from "@/types/check_list";
+import type { CheckList, CheckListId } from "@/types/check_list";
 import { newCheckList } from "@/types/check_list";
 import type { DateString } from "@/types/date_string";
-import { newItem, type Item } from "@/types/item";
+import { newItem } from "@/types/item";
+import type { Item, ItemId } from "@/types/item";
 import type { Store } from "@/types/store";
 import {
   findAllItems,
+  findCheckList,
   findCheckListByDate,
+  findCheckedCheckListIdsByItemId,
   findCheckedItemIdsByCheckListId,
   handle,
 } from "@/types/store";
 
-type ItemWithChecked = Item & { checked: boolean };
+type ItemForToday = Item & { checked: boolean } & { days: number | null };
 
 type ScreenState =
   | {
@@ -34,9 +37,31 @@ type ScreenState =
     }
   | {
       checkListId: CheckListId;
-      itemWithCheckeds: ItemWithChecked[];
+      itemWithCheckeds: (Item & { checked: boolean })[];
       type: "itemWithCheckedsLoaded";
+    }
+  | {
+      checkListId: CheckListId;
+      items: ItemForToday[];
+      type: "itemForTodayLoaded";
     };
+
+function getDays(store: Store, itemId: ItemId): number | null {
+  const checkListIds = findCheckedCheckListIdsByItemId(store, itemId);
+  const checkLists = checkListIds
+    .map((id): CheckList | null => findCheckList(store, id))
+    .filter((checkList): checkList is CheckList => checkList !== null)
+    .sort(({ date: a }, { date: b }) => (a < b ? 1 : a === b ? 0 : -1));
+  const days: number | null =
+    checkLists[0] === undefined
+      ? null
+      : ((new Date().getTime() -
+          new Date(checkLists[0].date + "T00:00:00Z").getTime()) /
+          (86400 * 1000)) |
+        0;
+
+  return days;
+}
 
 function handleScreenState(
   store: Store,
@@ -104,6 +129,18 @@ function handleScreenState(
       };
     }
     case "itemWithCheckedsLoaded": {
+      // TODO: too slow
+      const items = screenState.itemWithCheckeds.map((item) => {
+        const days = getDays(store, item.id);
+        return { ...item, days };
+      });
+      return {
+        checkListId: screenState.checkListId,
+        items,
+        type: "itemForTodayLoaded",
+      };
+    }
+    case "itemForTodayLoaded": {
       // do nothing
       return screenState;
     }
@@ -116,7 +153,7 @@ export function useTodayScreen(): {
   handleFABOnPress: () => void;
   handleListItemOnCheckboxPress: (item: Item) => () => void;
   handleListItemOnItemPress: (item: Item) => () => void;
-  items: ItemWithChecked[] | null;
+  items: ItemForToday[] | null;
 } {
   const [screenState, setScreenState] = useState<ScreenState>({
     type: "initial",
@@ -129,8 +166,8 @@ export function useTodayScreen(): {
   }, [screenState, store]);
 
   const handleFABOnPress = useCallback(() => {
-    if (screenState.type !== "itemWithCheckedsLoaded") return;
-    const items = screenState.itemWithCheckeds;
+    if (screenState.type !== "itemForTodayLoaded") return;
+    const items = screenState.items;
     const item = newItem({ name: `Item ${items.length}` });
 
     // update store
@@ -144,15 +181,15 @@ export function useTodayScreen(): {
     // update state
     setScreenState({
       ...screenState,
-      itemWithCheckeds: [...items, { ...item, checked: false }],
+      items: [...items, { ...item, checked: false, days: null }],
     });
   }, [screenState, store]);
 
   const handleListItemOnCheckboxPress = useCallback(
     (item: Item) => () => {
-      if (screenState.type !== "itemWithCheckedsLoaded") return;
+      if (screenState.type !== "itemForTodayLoaded") return;
       const itemId = item.id;
-      const items = screenState.itemWithCheckeds;
+      const items = screenState.items;
       const checked = !(items.find((i) => i.id === itemId)?.checked ?? false);
       const checkListId = screenState.checkListId;
 
@@ -165,7 +202,7 @@ export function useTodayScreen(): {
       // update state
       setScreenState({
         ...screenState,
-        itemWithCheckeds: items.map((item) => {
+        items: items.map((item) => {
           if (item.id !== itemId) return item;
           return { ...item, checked };
         }),
@@ -176,7 +213,7 @@ export function useTodayScreen(): {
 
   const handleListItemOnItemPress = useCallback(
     (item: Item) => () => {
-      if (screenState.type !== "itemWithCheckedsLoaded") return;
+      if (screenState.type !== "itemForTodayLoaded") return;
       navigation.dispatch(StackActions.push("Item", { itemId: item.id }));
     },
     [navigation, screenState.type]
@@ -186,9 +223,6 @@ export function useTodayScreen(): {
     handleFABOnPress,
     handleListItemOnCheckboxPress,
     handleListItemOnItemPress,
-    items:
-      screenState.type === "itemWithCheckedsLoaded"
-        ? screenState.itemWithCheckeds
-        : null,
+    items: screenState.type === "itemForTodayLoaded" ? screenState.items : null,
   };
 }

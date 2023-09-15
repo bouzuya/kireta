@@ -23,6 +23,7 @@ export function TodayScreen(_: Props): JSX.Element {
         renderItem={({ item }) => (
           <ListItem
             checked={item.checked}
+            days={item.days}
             item={item}
             onCheckboxPress={handleListItemOnCheckboxPress(item)}
             onItemPress={handleListItemOnItemPress(item)}
