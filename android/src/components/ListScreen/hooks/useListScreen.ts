@@ -1,9 +1,13 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useStore } from "@/components/StoreContext";
 import type { CheckListId } from "@/types/check_list";
 import type { Item } from "@/types/item";
-import { findCheckedItemIdsByCheckListId, findItem } from "@/types/store";
+import {
+  findCheckList,
+  findCheckedItemIdsByCheckListId,
+  findItem,
+} from "@/types/store";
 
 export function useListScreen(checkListId: CheckListId): {
   handleListItemOnPress: (item: Item) => () => void;
@@ -11,6 +15,7 @@ export function useListScreen(checkListId: CheckListId): {
 } {
   const navigation = useNavigation();
   const { store } = useStore();
+  const checkList = findCheckList(store, checkListId);
   const itemIds = findCheckedItemIdsByCheckListId(store, checkListId);
   const items = itemIds
     .map((itemId): Item | null => findItem(store, itemId))
@@ -22,6 +27,13 @@ export function useListScreen(checkListId: CheckListId): {
     },
     [navigation]
   );
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerTitle: checkList === null ? "List" : `List ${checkList.date}`,
+    });
+  }, [checkList, navigation]);
+
   return {
     handleListItemOnPress,
     items,
