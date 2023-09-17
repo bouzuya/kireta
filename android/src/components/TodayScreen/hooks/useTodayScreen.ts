@@ -161,10 +161,6 @@ export function useTodayScreen(): {
   const { store } = useStore();
   const navigation = useNavigation();
 
-  useEffect(() => {
-    setScreenState(handleScreenState(store, screenState));
-  }, [screenState, store]);
-
   const handleFABOnPress = useCallback(() => {
     if (screenState.type !== "itemForTodayLoaded") return;
     const items = screenState.items;
@@ -218,6 +214,17 @@ export function useTodayScreen(): {
     },
     [navigation, screenState.type]
   );
+
+  useEffect(() => {
+    setScreenState(handleScreenState(store, screenState));
+  }, [screenState, store]);
+
+  useEffect(() => {
+    if (screenState.type !== "initialized") return;
+    navigation.setOptions({
+      headerTitle: `Today ${screenState.date}`,
+    });
+  }, [navigation, screenState]);
 
   return {
     handleFABOnPress,
