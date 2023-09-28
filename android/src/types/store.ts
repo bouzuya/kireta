@@ -57,7 +57,8 @@ export function findAllCheckListIds(self: Store): CheckListId[] {
 export function findAllCheckLists(self: Store): CheckList[] {
   return findAllCheckListIds(self)
     .map((id) => findCheckList(self, id))
-    .filter((checkList): checkList is CheckList => checkList !== null);
+    .filter((checkList): checkList is CheckList => checkList !== null)
+    .sort((a, b) => a.date < b.date ? 1 : a.date === b.date ? 0 : -1);
 }
 
 export function findAllItemIds(self: Store): ItemId[] {
