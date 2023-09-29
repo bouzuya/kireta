@@ -19,7 +19,7 @@ export function HistoryScreen({ navigation }: Props): JSX.Element {
           <Button
             onPress={() => {
               navigation.dispatch(
-                StackActions.push("List", { checkListId: item.id })
+                StackActions.push("List", { checkListId: item.id }),
               );
             }}
           >

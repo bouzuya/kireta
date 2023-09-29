@@ -46,10 +46,15 @@ type ScreenState =
       type: "itemForTodayLoaded";
     };
 
-function getDays(store: Store, itemId: ItemId): number | null {
-  const checkListIds = findCheckedCheckListIdsByItemId(store, itemId);
-  const checkLists = checkListIds
-    .map((id): CheckList | null => findCheckList(store, id))
+async function getDays(store: Store, itemId: ItemId): Promise<number | null> {
+  const checkListIds = await findCheckedCheckListIdsByItemId(store, itemId);
+  const checkLists = (
+    await Promise.all(
+      checkListIds.map(
+        (id): Promise<CheckList | null> => findCheckList(store, id),
+      ),
+    )
+  )
     .filter((checkList): checkList is CheckList => checkList !== null)
     .sort(({ date: a }, { date: b }) => (a < b ? 1 : a === b ? 0 : -1));
   const days: number | null =
@@ -63,10 +68,10 @@ function getDays(store: Store, itemId: ItemId): number | null {
   return days;
 }
 
-function handleScreenState(
+async function handleScreenState(
   store: Store,
-  screenState: ScreenState
-): ScreenState {
+  screenState: ScreenState,
+): Promise<ScreenState> {
   const type = screenState.type;
   switch (type) {
     case "initial": {
@@ -77,8 +82,8 @@ function handleScreenState(
     }
     case "initialized": {
       const date = screenState.date;
-      const foundOrCreated = (() => {
-        const found = findCheckListByDate(store, date);
+      const foundOrCreated = await (async () => {
+        const found = await findCheckListByDate(store, date);
         if (found !== null) {
           return found;
         } else {
@@ -100,14 +105,14 @@ function handleScreenState(
     case "checkListIdLoaded": {
       return {
         checkListId: screenState.checkListId,
-        items: findAllItems(store),
+        items: await findAllItems(store),
         type: "itemsLoaded",
       };
     }
     case "itemsLoaded": {
-      const itemIds = findCheckedItemIdsByCheckListId(
+      const itemIds = await findCheckedItemIdsByCheckListId(
         store,
-        screenState.checkListId
+        screenState.checkListId,
       );
       return {
         checkListId: screenState.checkListId,
@@ -123,17 +128,19 @@ function handleScreenState(
               },
             };
           },
-          screenState.items.map((item) => ({ ...item, checked: false }))
+          screenState.items.map((item) => ({ ...item, checked: false })),
         ),
         type: "itemWithCheckedsLoaded",
       };
     }
     case "itemWithCheckedsLoaded": {
       // TODO: too slow
-      const items = screenState.itemWithCheckeds.map((item) => {
-        const days = getDays(store, item.id);
-        return { ...item, days };
-      });
+      const items = await Promise.all(
+        screenState.itemWithCheckeds.map(async (item) => {
+          const days = await getDays(store, item.id);
+          return { ...item, days };
+        }),
+      );
       return {
         checkListId: screenState.checkListId,
         items,
@@ -204,7 +211,7 @@ export function useTodayScreen(): {
         }),
       });
     },
-    [screenState, store]
+    [screenState, store],
   );
 
   const handleListItemOnItemPress = useCallback(
@@ -212,11 +219,13 @@ export function useTodayScreen(): {
       if (screenState.type !== "itemForTodayLoaded") return;
       navigation.dispatch(StackActions.push("Item", { itemId: item.id }));
     },
-    [navigation, screenState.type]
+    [navigation, screenState.type],
   );
 
   useEffect(() => {
-    setScreenState(handleScreenState(store, screenState));
+    void (async () => {
+      setScreenState(await handleScreenState(store, screenState));
+    })();
   }, [screenState, store]);
 
   useEffect(() => {

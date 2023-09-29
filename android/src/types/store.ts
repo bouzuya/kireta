@@ -44,76 +44,91 @@ export type Store = {
   };
 };
 
-export function findAllCheckListDates(self: Store): DateString[] {
-  return findAllCheckListIds(self)
+export async function findAllCheckListDates(
+  self: Store,
+): Promise<DateString[]> {
+  const checkListIds = await findAllCheckListIds(self);
+  return checkListIds
     .map((id): DateString | undefined => self.checkLists.byId[id]?.date)
     .filter((date): date is DateString => date !== undefined);
 }
 
-export function findAllCheckListIds(self: Store): CheckListId[] {
-  return [...self.checkLists.allIds];
+export function findAllCheckListIds(self: Store): Promise<CheckListId[]> {
+  return Promise.resolve([...self.checkLists.allIds]);
 }
 
-export function findAllCheckLists(self: Store): CheckList[] {
-  return findAllCheckListIds(self)
-    .map((id) => findCheckList(self, id))
+export async function findAllCheckLists(self: Store): Promise<CheckList[]> {
+  const checkListIds = await findAllCheckListIds(self);
+  const checkLists = await Promise.all(
+    checkListIds.map((id) => findCheckList(self, id)),
+  );
+  return checkLists
     .filter((checkList): checkList is CheckList => checkList !== null)
-    .sort((a, b) => a.date < b.date ? 1 : a.date === b.date ? 0 : -1);
+    .sort((a, b) => (a.date < b.date ? 1 : a.date === b.date ? 0 : -1));
 }
 
-export function findAllItemIds(self: Store): ItemId[] {
-  return [...self.items.allIds];
+export function findAllItemIds(self: Store): Promise<ItemId[]> {
+  return Promise.resolve([...self.items.allIds]);
 }
 
-export function findAllItems(self: Store): Item[] {
-  return findAllItemIds(self)
-    .map((id) => findItem(self, id))
-    .filter((item): item is Item => item !== null);
+export async function findAllItems(self: Store): Promise<Item[]> {
+  const itemIds = await findAllItemIds(self);
+  const items = await Promise.all(itemIds.map((id) => findItem(self, id)));
+  return items.filter((item): item is Item => item !== null);
 }
 
 export function findCheckListByDate(
   self: Store,
-  date: DateString
-): CheckList | null {
+  date: DateString,
+): Promise<CheckList | null> {
   const id = self.checkLists.byDate[date];
-  if (id === undefined) return null;
+  if (id === undefined) return Promise.resolve(null);
   return findCheckList(self, id);
 }
 
-export function findCheckList(self: Store, id: CheckListId): CheckList | null {
-  return self.checkLists.byId[id] ?? null;
+export function findCheckList(
+  self: Store,
+  id: CheckListId,
+): Promise<CheckList | null> {
+  return Promise.resolve(self.checkLists.byId[id] ?? null);
 }
 
 export function findCheckedCheckListIdsByItemId(
   self: Store,
-  itemId: ItemId
-): CheckListId[] {
+  itemId: ItemId,
+): Promise<CheckListId[]> {
   const byItemId = self.checked.byItemId[itemId] ?? {};
-  return Object.entries(byItemId)
-    .filter(([_, checked]: [CheckListId, boolean]): boolean => checked)
-    .map(([id, _]: [CheckListId, boolean]): CheckListId => id);
+  return Promise.resolve(
+    Object.entries(byItemId)
+      .filter(([_, checked]: [CheckListId, boolean]): boolean => checked)
+      .map(([id, _]: [CheckListId, boolean]): CheckListId => id),
+  );
 }
 
 export function findCheckedItemIdsByCheckListId(
   self: Store,
-  checkListId: CheckListId
-): ItemId[] {
+  checkListId: CheckListId,
+): Promise<ItemId[]> {
   const byCheckListId = self.checked.byCheckListId[checkListId] ?? {};
-  return Object.entries(byCheckListId)
-    .filter(([_, checked]: [ItemId, boolean]): boolean => checked)
-    .map(([id, _]: [ItemId, boolean]): ItemId => id);
+  return Promise.resolve(
+    Object.entries(byCheckListId)
+      .filter(([_, checked]: [ItemId, boolean]): boolean => checked)
+      .map(([id, _]: [ItemId, boolean]): ItemId => id),
+  );
 }
 
 export function findChecked(
   self: Store,
   checkListId: CheckListId,
-  itemId: ItemId
-): boolean {
-  return self.checked.byCheckListId[checkListId]?.[itemId] ?? false;
+  itemId: ItemId,
+): Promise<boolean> {
+  return Promise.resolve(
+    self.checked.byCheckListId[checkListId]?.[itemId] ?? false,
+  );
 }
 
-export function findItem(self: Store, id: ItemId): Item | null {
-  return self.items.byId[id] ?? null;
+export function findItem(self: Store, id: ItemId): Promise<Item | null> {
+  return Promise.resolve(self.items.byId[id] ?? null);
 }
 
 export function handle(mutSelf: Store, command: Command): void {
@@ -129,7 +144,7 @@ export function handle(mutSelf: Store, command: Command): void {
         mutSelf,
         command.payload.checkListId,
         command.payload.itemId,
-        command.payload.checked
+        command.payload.checked,
       );
       break;
   }
@@ -185,7 +200,7 @@ function storeChecked(
   mutSelf: Store,
   checkListId: CheckListId,
   itemId: ItemId,
-  checked: boolean
+  checked: boolean,
 ): void {
   // checkListId が checkLists に存在しない可能性はあるが、検査しない
   const byCheckListId = mutSelf.checked.byCheckListId[checkListId] ?? {};

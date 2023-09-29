@@ -38,16 +38,18 @@ export function useItemScreen(itemId: ItemId): {
   const navigation = useNavigation();
 
   useEffect(() => {
-    setScreenState(handleScreenState(store, screenState));
+    void (async () => {
+      setScreenState(await handleScreenState(store, screenState));
+    })();
   }, [store, screenState]);
 
   const handleListItemOnPress = useCallback(
     (checkList: CheckList) => () => {
       navigation.dispatch(
-        StackActions.push("List", { checkListId: checkList.id })
+        StackActions.push("List", { checkListId: checkList.id }),
       );
     },
-    [navigation]
+    [navigation],
   );
   return {
     data:
@@ -62,20 +64,25 @@ export function useItemScreen(itemId: ItemId): {
   };
 }
 
-function handleScreenState(
+async function handleScreenState(
   store: Store,
-  screenState: ScreenState
-): ScreenState {
+  screenState: ScreenState,
+): Promise<ScreenState> {
   switch (screenState.type) {
     case "initial": {
-      const item = findItem(store, screenState.itemId);
+      const item = await findItem(store, screenState.itemId);
       if (item === null) throw new Error("FIXME");
-      const checkListIds = findCheckedCheckListIdsByItemId(
+      const checkListIds = await findCheckedCheckListIdsByItemId(
         store,
-        screenState.itemId
+        screenState.itemId,
       );
-      const checkLists = checkListIds
-        .map((id): CheckList | null => findCheckList(store, id))
+      const checkLists = (
+        await Promise.all(
+          checkListIds.map(
+            (id): Promise<CheckList | null> => findCheckList(store, id),
+          ),
+        )
+      )
         .filter((checkList): checkList is CheckList => checkList !== null)
         .sort(({ date: a }, { date: b }) => (a < b ? 1 : a === b ? 0 : -1));
       const days: number | null =

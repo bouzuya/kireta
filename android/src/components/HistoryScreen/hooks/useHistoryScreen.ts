@@ -11,7 +11,9 @@ export function useHistoryScreen(): {
 
   useEffect(() => {
     if (checkLists !== null) return;
-    setCheckLists(findAllCheckLists(store));
+    void (async () => {
+      setCheckLists(await findAllCheckLists(store));
+    })();
   }, [checkLists, store]);
 
   return {

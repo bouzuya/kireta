@@ -1,7 +1,7 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useStore } from "@/components/StoreContext";
-import type { CheckListId } from "@/types/check_list";
+import type { CheckList, CheckListId } from "@/types/check_list";
 import type { Item } from "@/types/item";
 import {
   findCheckList,
@@ -15,18 +15,36 @@ export function useListScreen(checkListId: CheckListId): {
 } {
   const navigation = useNavigation();
   const { store } = useStore();
-  const checkList = findCheckList(store, checkListId);
-  const itemIds = findCheckedItemIdsByCheckListId(store, checkListId);
-  const items = itemIds
-    .map((itemId): Item | null => findItem(store, itemId))
-    .filter((item): item is Item => item !== null);
+  const [checkList, setCheckList] = useState<CheckList | null>(null);
+  const [items, setItems] = useState<Item[] | null>(null);
 
   const handleListItemOnPress = useCallback(
     (item: Item) => () => {
       navigation.dispatch(StackActions.push("Item", { itemId: item.id }));
     },
-    [navigation]
+    [navigation],
   );
+
+  useEffect(() => {
+    void (async () => {
+      setCheckList(await findCheckList(store, checkListId));
+    })();
+  }, [checkListId, store]);
+
+  useEffect(() => {
+    void (async () => {
+      const itemIds = await findCheckedItemIdsByCheckListId(store, checkListId);
+      setItems(
+        (
+          await Promise.all(
+            itemIds.map(
+              (itemId): Promise<Item | null> => findItem(store, itemId),
+            ),
+          )
+        ).filter((item): item is Item => item !== null),
+      );
+    })();
+  }, [checkListId, store]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -36,6 +54,7 @@ export function useListScreen(checkListId: CheckListId): {
 
   return {
     handleListItemOnPress,
-    items,
+    // TODO
+    items: items ?? [],
   };
 }
