@@ -46,11 +46,21 @@ export function useItemScreen(itemId: ItemId): {
   const handleListItemOnPress = useCallback(
     (checkList: CheckList) => () => {
       navigation.dispatch(
-        StackActions.push("List", { checkListId: checkList.id }),
+        StackActions.push("List", { checkListId: checkList.id })
       );
     },
-    [navigation],
+    [navigation]
   );
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerTitle:
+        screenState.type !== "loaded"
+          ? "Item"
+          : `Item ${screenState.item.name}`,
+    });
+  }, [navigation, screenState]);
+
   return {
     data:
       screenState.type === "loaded"
@@ -66,7 +76,7 @@ export function useItemScreen(itemId: ItemId): {
 
 async function handleScreenState(
   store: Store,
-  screenState: ScreenState,
+  screenState: ScreenState
 ): Promise<ScreenState> {
   switch (screenState.type) {
     case "initial": {
@@ -74,13 +84,13 @@ async function handleScreenState(
       if (item === null) throw new Error("FIXME");
       const checkListIds = await findCheckedCheckListIdsByItemId(
         store,
-        screenState.itemId,
+        screenState.itemId
       );
       const checkLists = (
         await Promise.all(
           checkListIds.map(
-            (id): Promise<CheckList | null> => findCheckList(store, id),
-          ),
+            (id): Promise<CheckList | null> => findCheckList(store, id)
+          )
         )
       )
         .filter((checkList): checkList is CheckList => checkList !== null)
