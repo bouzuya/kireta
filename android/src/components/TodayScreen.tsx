@@ -30,11 +30,7 @@ export function TodayScreen(_: Props): JSX.Element {
           />
         )}
       />
-      <FAB
-        icon="plus"
-        onPress={handleFABOnPress}
-        style={{ position: "absolute", right: 16, bottom: 16 }}
-      />
+      <FAB icon="plus" onPress={handleFABOnPress} style={styles.fab} />
     </View>
   );
 }
@@ -50,5 +46,10 @@ const styles = StyleSheet.create({
     margin: 0,
     padding: 0,
     width: "100%",
+  },
+  fab: {
+    bottom: 16,
+    position: "absolute",
+    right: 16,
   },
 });
