@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React from "react";
 import { FlatList, StyleSheet, View } from "react-native";
-import { List } from "react-native-paper";
+import { Checkbox, List } from "react-native-paper";
 import { useListScreen } from "@/components/ListScreen/hooks/useListScreen";
 import type { NativeStackParamList } from "@/types/navigation";
 
@@ -19,7 +19,20 @@ export function ListScreen({
         data={items}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <List.Item onPress={handleListItemOnPress(item)} title={item.name} />
+          <List.Item
+            left={(props) => (
+              <Checkbox
+                disabled={true}
+                status={item.checked ? "checked" : "unchecked"}
+                {...props}
+              />
+            )}
+            onPress={handleListItemOnPress(item)}
+            titleStyle={{
+              marginTop: -3,
+            }}
+            title={item.name}
+          />
         )}
       />
     </View>

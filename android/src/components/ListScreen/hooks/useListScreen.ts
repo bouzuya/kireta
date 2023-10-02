@@ -4,19 +4,21 @@ import { useStore } from "@/components/StoreContext";
 import type { CheckList, CheckListId } from "@/types/check_list";
 import type { Item } from "@/types/item";
 import {
+  findAllItems,
   findCheckList,
   findCheckedItemIdsByCheckListId,
-  findItem,
 } from "@/types/store";
+
+type ItemWithChecked = Item & { checked: boolean };
 
 export function useListScreen(checkListId: CheckListId): {
   handleListItemOnPress: (item: Item) => () => void;
-  items: Item[];
+  items: ItemWithChecked[];
 } {
   const navigation = useNavigation();
   const { store } = useStore();
   const [checkList, setCheckList] = useState<CheckList | null>(null);
-  const [items, setItems] = useState<Item[] | null>(null);
+  const [items, setItems] = useState<ItemWithChecked[] | null>(null);
 
   const handleListItemOnPress = useCallback(
     (item: Item) => () => {
@@ -33,15 +35,12 @@ export function useListScreen(checkListId: CheckListId): {
 
   useEffect(() => {
     void (async () => {
+      const items = await findAllItems(store);
       const itemIds = await findCheckedItemIdsByCheckListId(store, checkListId);
       setItems(
-        (
-          await Promise.all(
-            itemIds.map(
-              (itemId): Promise<Item | null> => findItem(store, itemId),
-            ),
-          )
-        ).filter((item): item is Item => item !== null),
+        items.map((item) => {
+          return { ...item, checked: itemIds.includes(item.id) };
+        }),
       );
     })();
   }, [checkListId, store]);
