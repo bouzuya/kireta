@@ -21,17 +21,17 @@ export function ListScreen({
         renderItem={({ item }) => (
           <List.Item
             left={(props) => (
-              <Checkbox
-                disabled={true}
-                status={item.checked ? "checked" : "unchecked"}
-                {...props}
-              />
+              <View style={{ paddingLeft: 8 }}>
+                <Checkbox
+                  disabled={true}
+                  status={item.checked ? "checked" : "unchecked"}
+                  {...props}
+                />
+              </View>
             )}
             onPress={handleListItemOnPress(item)}
-            titleStyle={{
-              marginTop: -3,
-            }}
             title={item.name}
+            titleStyle={{ marginTop: -3 }}
           />
         )}
       />

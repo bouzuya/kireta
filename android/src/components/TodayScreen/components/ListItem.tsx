@@ -20,11 +20,13 @@ export function ListItem({
   return (
     <List.Item
       left={(props) => (
-        <Checkbox
-          onPress={onCheckboxPress}
-          status={checked ? "checked" : "unchecked"}
-          {...props}
-        />
+        <View style={{ paddingLeft: 8 }}>
+          <Checkbox
+            onPress={onCheckboxPress}
+            status={checked ? "checked" : "unchecked"}
+            {...props}
+          />
+        </View>
       )}
       right={(_) => (
         <View style={styles.right}>
@@ -33,6 +35,7 @@ export function ListItem({
       )}
       onPress={onItemPress}
       title={item.name}
+      titleStyle={{ marginTop: -3 }}
     />
   );
 }
