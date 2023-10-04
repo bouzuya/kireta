@@ -31,7 +31,7 @@ export function ListScreen({
             )}
             onPress={handleListItemOnPress(item)}
             title={item.name}
-            titleStyle={{ marginTop: -3 }}
+            titleStyle={styles.listItemTitle}
           />
         )}
       />
@@ -50,5 +50,8 @@ const styles = StyleSheet.create({
     margin: 0,
     padding: 0,
     width: "100%",
+  },
+  listItemTitle: {
+    marginTop: -3,
   },
 });

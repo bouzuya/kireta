@@ -35,7 +35,7 @@ export function ListItem({
       )}
       onPress={onItemPress}
       title={item.name}
-      titleStyle={{ marginTop: -3 }}
+      titleStyle={styles.title}
     />
   );
 }
@@ -48,5 +48,8 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "flex-end",
     width: "100%",
+  },
+  title: {
+    marginTop: -3,
   },
 });
