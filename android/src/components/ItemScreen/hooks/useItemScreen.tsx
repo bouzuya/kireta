@@ -1,5 +1,6 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
 import { useCallback, useEffect, useState } from "react";
+import { IconButton } from "react-native-paper";
 import { useStore } from "@/components/StoreContext";
 import type { CheckList } from "@/types/check_list";
 import type { Item, ItemId } from "@/types/item";
@@ -28,6 +29,7 @@ export function useItemScreen(itemId: ItemId): {
     days: number | null;
     item: Item;
   } | null;
+  editing: boolean;
   handleListItemOnPress: (checkList: CheckList) => () => void;
 } {
   const [screenState, setScreenState] = useState<ScreenState>({
@@ -36,6 +38,7 @@ export function useItemScreen(itemId: ItemId): {
   });
   const { store } = useStore();
   const navigation = useNavigation();
+  const [editing, setEditing] = useState<boolean>(false);
 
   useEffect(() => {
     void (async () => {
@@ -46,20 +49,29 @@ export function useItemScreen(itemId: ItemId): {
   const handleListItemOnPress = useCallback(
     (checkList: CheckList) => () => {
       navigation.dispatch(
-        StackActions.push("List", { checkListId: checkList.id }),
+        StackActions.push("List", { checkListId: checkList.id })
       );
     },
-    [navigation],
+    [navigation]
   );
 
   useEffect(() => {
     navigation.setOptions({
+      headerRight: () => (
+        <IconButton
+          icon={editing ? "check" : "pencil"}
+          onPress={() => {
+            setEditing(!editing);
+          }}
+          style={{ marginRight: -4 }}
+        />
+      ),
       headerTitle:
         screenState.type !== "loaded"
           ? "Item"
           : `Item ${screenState.item.name}`,
     });
-  }, [navigation, screenState]);
+  }, [editing, navigation, screenState]);
 
   return {
     data:
@@ -70,13 +82,14 @@ export function useItemScreen(itemId: ItemId): {
             item: screenState.item,
           }
         : null,
+    editing,
     handleListItemOnPress,
   };
 }
 
 async function handleScreenState(
   store: Store,
-  screenState: ScreenState,
+  screenState: ScreenState
 ): Promise<ScreenState> {
   switch (screenState.type) {
     case "initial": {
@@ -84,13 +97,13 @@ async function handleScreenState(
       if (item === null) throw new Error("FIXME");
       const checkListIds = await findCheckedCheckListIdsByItemId(
         store,
-        screenState.itemId,
+        screenState.itemId
       );
       const checkLists = (
         await Promise.all(
           checkListIds.map(
-            (id): Promise<CheckList | null> => findCheckList(store, id),
-          ),
+            (id): Promise<CheckList | null> => findCheckList(store, id)
+          )
         )
       )
         .filter((checkList): checkList is CheckList => checkList !== null)

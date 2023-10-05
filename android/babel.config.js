@@ -13,6 +13,7 @@ module.exports = function (api) {
           root: ["."],
         },
       ],
+      "react-native-paper/babel"
     ],
   };
 };
