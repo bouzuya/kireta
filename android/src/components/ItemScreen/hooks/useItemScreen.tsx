@@ -8,6 +8,7 @@ import {
   findCheckedCheckListIdsByItemId,
   findCheckList,
   findItem,
+  handle,
   type Store,
 } from "@/types/store";
 
@@ -29,8 +30,9 @@ export function useItemScreen(itemId: ItemId): {
     days: number | null;
     item: Item;
   } | null;
-  editing: boolean;
+  editing: { name: string } | null;
   handleListItemOnPress: (checkList: CheckList) => () => void;
+  handleNameChangeText: (text: string) => void;
 } {
   const [screenState, setScreenState] = useState<ScreenState>({
     itemId,
@@ -38,7 +40,8 @@ export function useItemScreen(itemId: ItemId): {
   });
   const { store } = useStore();
   const navigation = useNavigation();
-  const [editing, setEditing] = useState<boolean>(false);
+  // TODO: editing -> screenState.type === "editing"
+  const [editing, setEditing] = useState<{ name: string } | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -55,13 +58,39 @@ export function useItemScreen(itemId: ItemId): {
     [navigation]
   );
 
+  const handleNameChangeText = useCallback(
+    (text: string) => {
+      if (editing === null) return;
+      setEditing({ ...editing, name: text });
+    },
+    [editing]
+  );
+
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
         <IconButton
-          icon={editing ? "check" : "pencil"}
+          icon={editing === null ? "pencil" : "check"}
           onPress={() => {
-            setEditing(!editing);
+            if (screenState.type !== "loaded") return;
+            if (editing === null) {
+              setEditing({ name: screenState.item.name });
+            } else {
+              setEditing(null);
+              handle(store, {
+                payload: {
+                  item: {
+                    ...screenState.item,
+                    name: editing.name,
+                  },
+                },
+                type: "setItem",
+              });
+              setScreenState({
+                itemId: screenState.item.id,
+                type: "initial",
+              });
+            }
           }}
           style={{ marginRight: -4 }}
         />
@@ -71,7 +100,7 @@ export function useItemScreen(itemId: ItemId): {
           ? "Item"
           : `Item ${screenState.item.name}`,
     });
-  }, [editing, navigation, screenState]);
+  }, [editing, navigation, screenState, store]);
 
   return {
     data:
@@ -84,6 +113,7 @@ export function useItemScreen(itemId: ItemId): {
         : null,
     editing,
     handleListItemOnPress,
+    handleNameChangeText,
   };
 }
 

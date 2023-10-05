@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
-import { Button, Divider, TextInput } from "react-native-paper";
+import { Button, TextInput } from "react-native-paper";
 import { useItemScreen } from "@/components/ItemScreen/hooks/useItemScreen";
 import type { NativeStackParamList } from "@/types/navigation";
 
@@ -12,7 +12,8 @@ export function ItemScreen({
     params: { itemId },
   },
 }: Props): JSX.Element {
-  const { data, editing, handleListItemOnPress } = useItemScreen(itemId);
+  const { data, editing, handleListItemOnPress, handleNameChangeText } =
+    useItemScreen(itemId);
   if (data === null) {
     return <Text>Loading...</Text>;
   }
@@ -25,9 +26,9 @@ export function ItemScreen({
       </View>
       <View style={{ padding: 16 }}>
         <Text>Item name</Text>
-        {editing ? (
-          // TODO: onChangeText
-          <TextInput disabled={!editing} value={item.name} />
+        {editing !== null ? (
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+          <TextInput value={editing.name} onChangeText={handleNameChangeText} />
         ) : (
           <Text
             style={{
