@@ -27,7 +27,6 @@ export function ItemScreen({
       <View style={{ padding: 16 }}>
         <Text>Item name</Text>
         {editing !== null ? (
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           <TextInput value={editing.name} onChangeText={handleNameChangeText} />
         ) : (
           <Text
