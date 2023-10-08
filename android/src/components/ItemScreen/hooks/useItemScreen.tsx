@@ -118,7 +118,7 @@ export function useItemScreen(itemId: ItemId): {
 
   return {
     data:
-      screenState.type === "loaded"
+      screenState.type === "loaded" || screenState.type === "editing"
         ? {
             checkLists: screenState.checkLists,
             days: screenState.days,
@@ -167,6 +167,8 @@ async function handleScreenState(
       };
     }
     case "loaded":
+      return screenState;
+    case "editing":
       return screenState;
     default:
       throw new Error("assert unknown screenState.type");
