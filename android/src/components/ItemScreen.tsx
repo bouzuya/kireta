@@ -1,9 +1,23 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
-import { Button, TextInput } from "react-native-paper";
+import { List, TextInput } from "react-native-paper";
 import { useItemScreen } from "@/components/ItemScreen/hooks/useItemScreen";
 import type { NativeStackParamList } from "@/types/navigation";
+
+type LabeledValueProps = {
+  label: string;
+  value: string;
+};
+
+function LabeledValue({ label, value }: LabeledValueProps): JSX.Element {
+  return (
+    <View style={styles.labeledValueContainer}>
+      <Text>{label}</Text>
+      <Text style={styles.valueText}>{value}</Text>
+    </View>
+  );
+}
 
 type Props = NativeStackScreenProps<NativeStackParamList, "Item">;
 
@@ -20,44 +34,33 @@ export function ItemScreen({
   const { checkLists, days, item } = data;
   return (
     <View style={styles.container}>
-      <View>
-        <Text>Item ID</Text>
-        <Text>{item.id}</Text>
-      </View>
-      <View style={{ padding: 16 }}>
+      <LabeledValue label="Item ID" value={item.id} />
+      <View style={styles.labeledValueContainer}>
         <Text>Item name</Text>
         {editing !== null ? (
           <TextInput value={editing.name} onChangeText={handleNameChangeText} />
         ) : (
-          <Text
-            style={{
-              borderBottomColor: "transparent",
-              borderBottomWidth: 2,
-              fontSize: 16,
-              padding: 16,
-            }}
-          >
-            {item.name}
-          </Text>
+          <Text style={styles.valueText}>{item.name}</Text>
         )}
       </View>
-      <View>
-        <Text>Last purchased</Text>
-        <Text>{days !== null ? `${days} days ago` : "(none)"}</Text>
-      </View>
-      <View>
-        <Text>Number of purchases</Text>
-        <Text>{`${checkLists.length} times`}</Text>
-      </View>
-      <View>
+      <LabeledValue
+        label="Last purchased"
+        value={days !== null ? `${days} days ago` : "(none)"}
+      />
+      <LabeledValue
+        label="Number of purchases"
+        value={`${checkLists.length} times`}
+      />
+      <View style={styles.labeledValueContainer}>
         <Text>Purchase history</Text>
         <FlatList
           data={checkLists}
           keyExtractor={(checkList) => checkList.id}
           renderItem={({ item: checkList }) => (
-            <Button onPress={handleListItemOnPress(checkList)}>
-              {checkList.date}
-            </Button>
+            <List.Item
+              onPress={handleListItemOnPress(checkList)}
+              title={checkList.date}
+            />
           )}
         />
       </View>
@@ -74,7 +77,17 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "flex-start",
     margin: 0,
-    padding: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 16,
     width: "100%",
+  },
+  labeledValueContainer: {
+    paddingHorizontal: 16,
+  },
+  valueText: {
+    borderBottomColor: "transparent",
+    borderBottomWidth: 2,
+    fontSize: 16,
+    padding: 16,
   },
 });
