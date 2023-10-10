@@ -2,22 +2,9 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import { List, TextInput } from "react-native-paper";
+import { LabeledValue } from "@/components/ItemScreen/components/LabeledValue";
 import { useItemScreen } from "@/components/ItemScreen/hooks/useItemScreen";
 import type { NativeStackParamList } from "@/types/navigation";
-
-type LabeledValueProps = {
-  label: string;
-  value: string;
-};
-
-function LabeledValue({ label, value }: LabeledValueProps): JSX.Element {
-  return (
-    <View style={styles.labeledValueContainer}>
-      <Text>{label}</Text>
-      <Text style={styles.valueText}>{value}</Text>
-    </View>
-  );
-}
 
 type Props = NativeStackScreenProps<NativeStackParamList, "Item">;
 
