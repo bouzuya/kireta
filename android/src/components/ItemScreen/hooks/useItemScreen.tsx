@@ -110,7 +110,7 @@ export function useItemScreen(itemId: ItemId): {
         />
       ),
       headerTitle:
-        screenState.type !== "loaded"
+        screenState.type === "initial"
           ? "Item"
           : `Item ${screenState.item.name}`,
     });

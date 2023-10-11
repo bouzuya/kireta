@@ -15,33 +15,40 @@ export function ItemScreen({
 }: Props): JSX.Element {
   const { data, editing, handleListItemOnPress, handleNameChangeText } =
     useItemScreen(itemId);
-  if (data === null) {
-    return <Text>Loading...</Text>;
-  }
-  const { checkLists, days, item } = data;
   return (
     <View style={styles.container}>
-      <LabeledValue label="Item ID" value={item.id} />
+      <LabeledValue
+        label="Item ID"
+        value={data === null ? " " : data.item.id}
+      />
       <View style={styles.labeledValueContainer}>
         <Text>Item name</Text>
         {editing !== null ? (
           <TextInput value={editing.name} onChangeText={handleNameChangeText} />
         ) : (
-          <Text style={styles.valueText}>{item.name}</Text>
+          <Text style={styles.valueText}>
+            {data === null ? " " : data.item.name}
+          </Text>
         )}
       </View>
       <LabeledValue
         label="Last purchased"
-        value={days !== null ? `${days} days ago` : "(none)"}
+        value={
+          data === null
+            ? " "
+            : data.days === null
+            ? "(none)"
+            : `${data.days} days ago`
+        }
       />
       <LabeledValue
         label="Number of purchases"
-        value={`${checkLists.length} times`}
+        value={data === null ? " " : `${data.checkLists.length} times`}
       />
       <View style={styles.labeledValueContainer}>
         <Text>Purchase history</Text>
         <FlatList
-          data={checkLists}
+          data={data?.checkLists ?? []}
           keyExtractor={(checkList) => checkList.id}
           renderItem={({ item: checkList }) => (
             <List.Item
