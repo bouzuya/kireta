@@ -48,11 +48,36 @@ export function useItemScreen(itemId: ItemId): {
   const { store } = useStore();
   const navigation = useNavigation();
 
-  useEffect(() => {
-    void (async () => {
-      setScreenState(await handleScreenState(store, screenState));
-    })();
-  }, [store, screenState]);
+  const handleIconButtonOnPress = useCallback(() => {
+    switch (screenState.type) {
+      case "initial":
+        return;
+      case "loaded": {
+        setScreenState({
+          ...screenState,
+          name: screenState.item.name,
+          type: "editing",
+        });
+        return;
+      }
+      case "editing": {
+        handle(store, {
+          payload: {
+            item: {
+              ...screenState.item,
+              name: screenState.name,
+            },
+          },
+          type: "setItem",
+        });
+        setScreenState({
+          itemId: screenState.item.id,
+          type: "initial",
+        });
+        return;
+      }
+    }
+  }, [screenState, store]);
 
   const handleListItemOnPress = useCallback(
     (checkList: CheckList) => () => {
@@ -76,45 +101,19 @@ export function useItemScreen(itemId: ItemId): {
       headerRight: () => (
         <IconButton
           icon={screenState.type === "editing" ? "check" : "pencil"}
-          onPress={() => {
-            switch (screenState.type) {
-              case "initial":
-                return;
-              case "loaded": {
-                setScreenState({
-                  ...screenState,
-                  name: screenState.item.name,
-                  type: "editing",
-                });
-                return;
-              }
-              case "editing": {
-                handle(store, {
-                  payload: {
-                    item: {
-                      ...screenState.item,
-                      name: screenState.name,
-                    },
-                  },
-                  type: "setItem",
-                });
-                setScreenState({
-                  itemId: screenState.item.id,
-                  type: "initial",
-                });
-                return;
-              }
-            }
-          }}
+          onPress={handleIconButtonOnPress}
           style={{ marginRight: -4 }}
         />
       ),
-      headerTitle:
-        screenState.type === "initial"
-          ? "Item"
-          : `Item ${screenState.item.name}`,
+      headerTitle: getHeaderTitle(screenState),
     });
-  }, [navigation, screenState, store]);
+  }, [handleIconButtonOnPress, navigation, screenState]);
+
+  useEffect(() => {
+    void (async () => {
+      setScreenState(await handleScreenState(store, screenState));
+    })();
+  }, [store, screenState]);
 
   return {
     data:
@@ -129,6 +128,12 @@ export function useItemScreen(itemId: ItemId): {
     handleListItemOnPress,
     handleNameChangeText,
   };
+}
+
+function getHeaderTitle(screenState: ScreenState): string {
+  return screenState.type === "initial"
+    ? "Item"
+    : `Item ${screenState.item.name}`;
 }
 
 async function handleScreenState(
