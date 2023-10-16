@@ -158,15 +158,18 @@ async function handleScreenState(
 
 export function useTodayScreen(): {
   handleFABOnPress: () => void;
+  handleFlatListOnRefresh: () => void;
   handleListItemOnCheckboxPress: (item: Item) => () => void;
   handleListItemOnItemPress: (item: Item) => () => void;
   items: ItemForToday[] | null;
+  refreshing: boolean;
 } {
   const [screenState, setScreenState] = useState<ScreenState>({
     type: "initial",
   });
   const { store } = useStore();
   const navigation = useNavigation();
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
   const handleFABOnPress = useCallback(() => {
     if (screenState.type !== "itemForTodayLoaded") return;
@@ -187,6 +190,15 @@ export function useTodayScreen(): {
       items: [...items, { ...item, checked: false, days: null }],
     });
   }, [screenState, store]);
+
+  const handleFlatListOnRefresh = useCallback(() => {
+    setRefreshing(true);
+    try {
+      setScreenState({ type: "initial" });
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
 
   const handleListItemOnCheckboxPress = useCallback(
     (item: Item) => () => {
@@ -237,8 +249,10 @@ export function useTodayScreen(): {
 
   return {
     handleFABOnPress,
+    handleFlatListOnRefresh,
     handleListItemOnCheckboxPress,
     handleListItemOnItemPress,
     items: screenState.type === "itemForTodayLoaded" ? screenState.items : null,
+    refreshing,
   };
 }

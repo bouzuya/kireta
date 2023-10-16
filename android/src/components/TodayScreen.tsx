@@ -11,15 +11,19 @@ type Props = BottomTabScreenProps<BottomTabParamList, "Today">;
 export function TodayScreen(_: Props): JSX.Element {
   const {
     handleFABOnPress,
+    handleFlatListOnRefresh,
     handleListItemOnCheckboxPress,
     handleListItemOnItemPress,
     items,
+    refreshing,
   } = useTodayScreen();
   return (
     <View style={styles.container}>
       <FlatList
         data={items}
         keyExtractor={(item) => item.id.toString()}
+        onRefresh={handleFlatListOnRefresh}
+        refreshing={refreshing}
         renderItem={({ item }) => (
           <ListItem
             checked={item.checked}

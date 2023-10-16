@@ -51,7 +51,7 @@ export type Store = {
 };
 
 export async function findAllCheckListDates(
-  self: Store
+  self: Store,
 ): Promise<DateString[]> {
   const checkListIds = await findAllCheckListIds(self);
   return checkListIds
@@ -66,7 +66,7 @@ export function findAllCheckListIds(self: Store): Promise<CheckListId[]> {
 export async function findAllCheckLists(self: Store): Promise<CheckList[]> {
   const checkListIds = await findAllCheckListIds(self);
   const checkLists = await Promise.all(
-    checkListIds.map((id) => findCheckList(self, id))
+    checkListIds.map((id) => findCheckList(self, id)),
   );
   return checkLists
     .filter((checkList): checkList is CheckList => checkList !== null)
@@ -85,7 +85,7 @@ export async function findAllItems(self: Store): Promise<Item[]> {
 
 export function findCheckListByDate(
   self: Store,
-  date: DateString
+  date: DateString,
 ): Promise<CheckList | null> {
   const id = self.checkLists.byDate[date];
   if (id === undefined) return Promise.resolve(null);
@@ -94,42 +94,42 @@ export function findCheckListByDate(
 
 export function findCheckList(
   self: Store,
-  id: CheckListId
+  id: CheckListId,
 ): Promise<CheckList | null> {
   return Promise.resolve(self.checkLists.byId[id] ?? null);
 }
 
 export function findCheckedCheckListIdsByItemId(
   self: Store,
-  itemId: ItemId
+  itemId: ItemId,
 ): Promise<CheckListId[]> {
   const byItemId = self.checked.byItemId[itemId] ?? {};
   return Promise.resolve(
     Object.entries(byItemId)
       .filter(([_, checked]: [CheckListId, boolean]): boolean => checked)
-      .map(([id, _]: [CheckListId, boolean]): CheckListId => id)
+      .map(([id, _]: [CheckListId, boolean]): CheckListId => id),
   );
 }
 
 export function findCheckedItemIdsByCheckListId(
   self: Store,
-  checkListId: CheckListId
+  checkListId: CheckListId,
 ): Promise<ItemId[]> {
   const byCheckListId = self.checked.byCheckListId[checkListId] ?? {};
   return Promise.resolve(
     Object.entries(byCheckListId)
       .filter(([_, checked]: [ItemId, boolean]): boolean => checked)
-      .map(([id, _]: [ItemId, boolean]): ItemId => id)
+      .map(([id, _]: [ItemId, boolean]): ItemId => id),
   );
 }
 
 export function findChecked(
   self: Store,
   checkListId: CheckListId,
-  itemId: ItemId
+  itemId: ItemId,
 ): Promise<boolean> {
   return Promise.resolve(
-    self.checked.byCheckListId[checkListId]?.[itemId] ?? false
+    self.checked.byCheckListId[checkListId]?.[itemId] ?? false,
   );
 }
 
@@ -150,7 +150,7 @@ export function handle(mutSelf: Store, command: Command): void {
         mutSelf,
         command.payload.checkListId,
         command.payload.itemId,
-        command.payload.checked
+        command.payload.checked,
       );
       break;
     case "setItem":
@@ -209,7 +209,7 @@ function storeChecked(
   mutSelf: Store,
   checkListId: CheckListId,
   itemId: ItemId,
-  checked: boolean
+  checked: boolean,
 ): void {
   // checkListId が checkLists に存在しない可能性はあるが、検査しない
   const byCheckListId = mutSelf.checked.byCheckListId[checkListId] ?? {};

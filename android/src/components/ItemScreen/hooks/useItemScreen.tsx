@@ -82,10 +82,10 @@ export function useItemScreen(itemId: ItemId): {
   const handleListItemOnPress = useCallback(
     (checkList: CheckList) => () => {
       navigation.dispatch(
-        StackActions.push("List", { checkListId: checkList.id })
+        StackActions.push("List", { checkListId: checkList.id }),
       );
     },
-    [navigation]
+    [navigation],
   );
 
   const handleNameChangeText = useCallback(
@@ -93,7 +93,7 @@ export function useItemScreen(itemId: ItemId): {
       if (screenState.type !== "editing") return;
       setScreenState({ ...screenState, name: text });
     },
-    [screenState]
+    [screenState],
   );
 
   useEffect(() => {
@@ -138,7 +138,7 @@ function getHeaderTitle(screenState: ScreenState): string {
 
 async function handleScreenState(
   store: Store,
-  screenState: ScreenState
+  screenState: ScreenState,
 ): Promise<ScreenState> {
   switch (screenState.type) {
     case "initial": {
@@ -146,13 +146,13 @@ async function handleScreenState(
       if (item === null) throw new Error("FIXME");
       const checkListIds = await findCheckedCheckListIdsByItemId(
         store,
-        screenState.itemId
+        screenState.itemId,
       );
       const checkLists = (
         await Promise.all(
           checkListIds.map(
-            (id): Promise<CheckList | null> => findCheckList(store, id)
-          )
+            (id): Promise<CheckList | null> => findCheckList(store, id),
+          ),
         )
       )
         .filter((checkList): checkList is CheckList => checkList !== null)
