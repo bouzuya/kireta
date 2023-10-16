@@ -118,15 +118,11 @@ async function handleScreenState(
         checkListId: screenState.checkListId,
         itemWithCheckeds: itemIds.reduce(
           (acc, checkedItemId) => {
-            const item = acc.find((i) => i.id === checkedItemId);
-            if (item === undefined) return acc;
-            return {
-              ...acc,
-              [checkedItemId]: {
-                ...item,
-                checked: true,
-              },
-            };
+            return acc.map((item) => {
+              return item.id === checkedItemId
+                ? { ...item, checked: true }
+                : item;
+            });
           },
           screenState.items.map((item) => ({ ...item, checked: false })),
         ),
