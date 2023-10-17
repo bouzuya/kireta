@@ -6,7 +6,7 @@ type StoreContextValue = {
 };
 
 const StoreContext = createContext<StoreContextValue>({
-  store: newStore(),
+  store: {} as Store,
 });
 
 export function useStore(): StoreContextValue {
