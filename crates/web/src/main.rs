@@ -1,6 +1,4 @@
-mod item;
 mod query;
-mod store;
 
 use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
 use async_graphql_axum::GraphQL;
@@ -8,7 +6,7 @@ use axum::{
     response::{Html, IntoResponse},
     routing, Router, Server,
 };
-use store::Store;
+use query::Store;
 
 async fn graphiql() -> impl IntoResponse {
     Html(GraphiQLSource::build().endpoint("/graphql").finish())

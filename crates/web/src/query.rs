@@ -1,6 +1,11 @@
+mod item;
+mod store;
+
 use async_graphql::Context;
 
-use crate::{item::Item, store::Store};
+use self::item::Item;
+
+pub use self::store::Store;
 
 pub struct QueryRoot;
 
