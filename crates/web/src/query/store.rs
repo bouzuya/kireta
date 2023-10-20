@@ -1,10 +1,14 @@
 use super::item::Item;
 
 pub struct Store {
-    pub items: Vec<Item<'static>>,
+    items: Vec<Item<'static>>,
 }
 
 impl Store {
+    pub async fn find_all_items(&self) -> Vec<Item<'_>> {
+        self.items.to_vec()
+    }
+
     pub fn example() -> Self {
         Self {
             items: vec![

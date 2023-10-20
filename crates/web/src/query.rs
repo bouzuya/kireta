@@ -21,6 +21,6 @@ impl QueryRoot {
 
     async fn items<'a>(&self, ctx: &Context<'a>) -> Vec<Item<'a>> {
         let store = ctx.data_unchecked::<Store>();
-        store.items.to_vec()
+        store.find_all_items().await
     }
 }
