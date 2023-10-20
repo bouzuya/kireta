@@ -16,7 +16,7 @@ async fn graphiql() -> impl IntoResponse {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let schema = Schema::build(query::Query, EmptyMutation, EmptySubscription)
+    let schema = Schema::build(query::QueryRoot, EmptyMutation, EmptySubscription)
         .data(Store::example())
         .finish();
     let app = Router::new()

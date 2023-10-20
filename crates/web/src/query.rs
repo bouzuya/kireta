@@ -2,10 +2,10 @@ use async_graphql::Context;
 
 use crate::{item::Item, store::Store};
 
-pub struct Query;
+pub struct QueryRoot;
 
 #[async_graphql::Object]
-impl Query {
+impl QueryRoot {
     async fn hello(&self) -> &'static str {
         "Hello, World!"
     }
