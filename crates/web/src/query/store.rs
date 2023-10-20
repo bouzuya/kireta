@@ -1,24 +1,26 @@
+use crate::model;
+
 use super::item::Item;
 
 pub struct Store {
-    items: Vec<Item<'static>>,
+    items: Vec<model::Item>,
 }
 
 impl Store {
     pub async fn find_all_items(&self) -> Vec<Item<'_>> {
-        self.items.to_vec()
+        self.items.iter().map(Item).collect()
     }
 
     pub fn example() -> Self {
         Self {
             items: vec![
-                Item {
-                    id: "1",
-                    name: "item1",
+                model::Item {
+                    id: "1".to_owned(),
+                    name: "item1".to_owned(),
                 },
-                Item {
-                    id: "2",
-                    name: "item2",
+                model::Item {
+                    id: "2".to_owned(),
+                    name: "item2".to_owned(),
                 },
             ],
         }

@@ -1,3 +1,4 @@
+mod model;
 mod query;
 
 use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
