@@ -21,13 +21,18 @@ impl QueryRoot {
         a + b
     }
 
-    async fn check_lists<'a>(&self, ctx: &Context<'a>) -> Vec<CheckList<'a>> {
+    async fn check_lists<'a>(&self, ctx: &Context<'a>) -> Vec<CheckList> {
         let store = ctx.data_unchecked::<Store>();
-        store.find_all_check_lists().await
+        store
+            .find_all_check_lists()
+            .await
+            .into_iter()
+            .map(CheckList)
+            .collect()
     }
 
-    async fn items<'a>(&self, ctx: &Context<'a>) -> Vec<Item<'a>> {
+    async fn items<'a>(&self, ctx: &Context<'a>) -> Vec<Item> {
         let store = ctx.data_unchecked::<Store>();
-        store.find_all_items().await
+        store.find_all_items().await.into_iter().map(Item).collect()
     }
 }

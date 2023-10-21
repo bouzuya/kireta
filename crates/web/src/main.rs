@@ -71,6 +71,16 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_check_lists_checked_items() -> anyhow::Result<()> {
+        // dummy data
+        test_query(
+            r#"{"query":"query { checkLists { id, checkedItems { id } } }"}"#,
+            r#"{"data":{"checkLists":[{"id":"1","checkedItems":[{"id":"1"}]}]}}"#,
+        )
+        .await
+    }
+
+    #[tokio::test]
     async fn test_items() -> anyhow::Result<()> {
         // dummy data
         test_query(
