@@ -135,7 +135,7 @@ mod tests {
         // dummy data
         test_query(
             r#"{"query":"query { checkLists { id, date } }"}"#,
-            r#"{"data":{"checkLists":[{"id":"1","date":"2020-01-02"}]}}"#,
+            r#"{"data":{"checkLists":[{"id":"1","date":"2020-01-02"},{"id":"2","date":"2020-01-03"}]}}"#,
         )
         .await
     }
@@ -145,7 +145,7 @@ mod tests {
         // dummy data
         test_query(
             r#"{"query":"query { checkLists { id, checkedItems { id } } }"}"#,
-            r#"{"data":{"checkLists":[{"id":"1","checkedItems":[{"id":"1"}]}]}}"#,
+            r#"{"data":{"checkLists":[{"id":"1","checkedItems":[{"id":"1"}]},{"id":"2","checkedItems":[{"id":"2"}]}]}}"#,
         )
         .await
     }
@@ -156,6 +156,16 @@ mod tests {
         test_query(
             r#"{"query":"query { items { id, name } }"}"#,
             r#"{"data":{"items":[{"id":"1","name":"item1"},{"id":"2","name":"item2"}]}}"#,
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn test_items_checked_check_lists() -> anyhow::Result<()> {
+        // dummy data
+        test_query(
+            r#"{"query":"query { items { id, checkedCheckLists { id } } }"}"#,
+            r#"{"data":{"items":[{"id":"1","checkedCheckLists":[{"id":"1"}]},{"id":"2","checkedCheckLists":[{"id":"2"}]}]}}"#,
         )
         .await
     }

@@ -21,14 +21,26 @@ impl Store {
 
     pub fn example() -> Self {
         Self {
-            check_lists: vec![model::CheckList {
-                id: "1".to_owned(),
-                date: "2020-01-02".to_owned(),
-            }],
-            checks: vec![model::Check {
-                check_list_id: "1".to_owned(),
-                item_id: "1".to_owned(),
-            }],
+            check_lists: vec![
+                model::CheckList {
+                    id: "1".to_owned(),
+                    date: "2020-01-02".to_owned(),
+                },
+                model::CheckList {
+                    id: "2".to_owned(),
+                    date: "2020-01-03".to_owned(),
+                },
+            ],
+            checks: vec![
+                model::Check {
+                    check_list_id: "1".to_owned(),
+                    item_id: "1".to_owned(),
+                },
+                model::Check {
+                    check_list_id: "2".to_owned(),
+                    item_id: "2".to_owned(),
+                },
+            ],
             items: vec![
                 model::Item {
                     id: "1".to_owned(),

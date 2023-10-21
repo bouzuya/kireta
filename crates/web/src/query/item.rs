@@ -1,4 +1,8 @@
-use crate::model;
+use async_graphql::Context;
+
+use crate::model::{self};
+
+use super::check_list::CheckList;
 
 #[derive(Clone, Debug)]
 pub struct Item(pub model::Item);
@@ -11,5 +15,24 @@ impl Item {
 
     async fn name(&self) -> &str {
         &self.0.name
+    }
+
+    async fn checked_check_lists(&self, context: &Context<'_>) -> Vec<CheckList> {
+        let store = context.data_unchecked::<crate::query::Store>();
+        let check_lists = store.find_all_check_lists().await;
+        // TODO: Store::find_checks_by_item_id
+        let checks = store.find_all_checks().await;
+        checks
+            .into_iter()
+            .filter(|check| check.item_id == self.0.id)
+            .map(|check| {
+                check_lists
+                    .iter()
+                    .find(|check_list| check_list.id == check.check_list_id)
+                    .cloned()
+                    .unwrap()
+            })
+            .map(CheckList)
+            .collect()
     }
 }
