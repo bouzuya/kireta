@@ -7,6 +7,7 @@ use super::item::Item;
 #[derive(Clone, Debug)]
 pub struct CheckList(pub model::CheckList);
 
+/// check list
 #[async_graphql::Object]
 impl CheckList {
     async fn id(&self) -> &str {

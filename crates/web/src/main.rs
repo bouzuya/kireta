@@ -38,9 +38,17 @@ async fn main() -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use crate::test_utils::{request, send_request, ResponseExt, StatusCode};
 
     use super::*;
+
+    macro_rules! test_query3 {
+        ($q:tt, $e:tt) => {
+            test_query2(json!($q), json!($e)).await
+        };
+    }
 
     #[tokio::test]
     async fn test_hello() -> anyhow::Result<()> {
@@ -52,12 +60,74 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_hello_json() -> anyhow::Result<()> {
+        test_query3!(
+            {
+                "query": "query { hello }"
+            },
+            {
+                "data": {
+                    "hello": "Hello, World!"
+                }
+            }
+        )
+    }
+
+    #[tokio::test]
     async fn test_add() -> anyhow::Result<()> {
         test_query(
             r#"{"query":"query { add(a: 1, b: 2) }"}"#,
             r#"{"data":{"add":3}}"#,
         )
         .await
+    }
+
+    #[tokio::test]
+    async fn test_add_graphql() -> anyhow::Result<()> {
+        test_query3!(
+            {
+                "query": include_str!("../graphql/test_add.graphql"),
+                "variables": {
+                    "a": 1,
+                    "b": 2
+                }
+            },
+            {
+                "data": {
+                    "add": 3
+                }
+            }
+        )
+    }
+
+    #[tokio::test]
+    async fn test_check_list_schema() -> anyhow::Result<()> {
+        test_query(
+            r#"{"query":"query { __type(name: \"CheckList\") { name, description, kind } }"}"#,
+            r#"{"data":{"__type":{"name":"CheckList","description":"check list","kind":"OBJECT"}}}"#,
+        )
+        .await?;
+        test_query(
+            r#"{"query":"query { __type(name: \"CheckList\") { fields { name } } }"}"#,
+            r#"{"data":{"__type":{"fields":[{"name":"id"},{"name":"date"},{"name":"checkedItems"}]}}}"#,
+        )
+        .await?;
+
+        test_query(
+            r#"{"query":"query { __schema { queryType { name } } }"}"#,
+            r#"{"data":{"__schema":{"queryType":{"name":"QueryRoot"}}}}"#,
+        )
+        .await?;
+
+        test_query(
+            r#"{"query":"query { __schema { mutationType { name } } }"}"#,
+            r#"{"data":{"__schema":{"mutationType":null}}}"#,
+        )
+        .await?;
+
+        // <https://graphql.org/learn/introspection/>
+        // r#"{"query":"query { __type(name: \"...\") { fields { name } } }"}"#,
+        Ok(())
     }
 
     #[tokio::test]
@@ -90,12 +160,50 @@ mod tests {
         .await
     }
 
-    async fn test_query(query: &'static str, expected: &str) -> anyhow::Result<()> {
+    #[tokio::test]
+    async fn test_schema() -> anyhow::Result<()> {
+        test_query(
+            r#"{"query":"query { __schema { queryType { name } } }"}"#,
+            r#"{"data":{"__schema":{"queryType":{"name":"QueryRoot"}}}}"#,
+        )
+        .await?;
+
+        test_query(
+            r#"{"query":"query { __schema { mutationType { name } } }"}"#,
+            r#"{"data":{"__schema":{"mutationType":null}}}"#,
+        )
+        .await?;
+
+        test_query(
+            r#"{"query":"query { __schema { subscriptionType { name } } }"}"#,
+            r#"{"data":{"__schema":{"subscriptionType":null}}}"#,
+        )
+        .await?;
+
+        test_query(
+            r#"{"query":"query { __type(name: \"QueryRoot\") { name, kind } }"}"#,
+            r#"{"data":{"__type":{"name":"QueryRoot","kind":"OBJECT"}}}"#,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn test_query<B>(query: B, expected: &str) -> anyhow::Result<()>
+    where
+        B: Into<axum::body::Body>,
+    {
         let app = route();
         let request = request("POST", "/graphql", query)?;
         let response = send_request(app, request).await?;
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(response.into_body_as_string().await?, expected);
         Ok(())
+    }
+
+    async fn test_query2(
+        query: serde_json::Value,
+        expected: serde_json::Value,
+    ) -> anyhow::Result<()> {
+        test_query(query.to_string(), expected.to_string().as_str()).await
     }
 }

@@ -16,16 +16,20 @@ impl ResponseExt for axum::response::Response<axum::body::BoxBody> {
     }
 }
 
-pub fn request(
+pub fn request<B>(
     method: &str,
     uri: &str,
-    body: &'static str,
-) -> Result<axum::http::Request<axum::body::Body>, axum::http::Error> {
+    body: B,
+) -> Result<axum::http::Request<axum::body::Body>, axum::http::Error>
+where
+    B: std::convert::Into<axum::body::Body>,
+{
+    let body: axum::body::Body = body.into();
     axum::http::Request::builder()
         .method(method)
         .uri(uri)
         .header(axum::http::header::CONTENT_TYPE, "application/json")
-        .body(axum::body::Body::from(body))
+        .body(body)
 }
 
 pub async fn send_request(
