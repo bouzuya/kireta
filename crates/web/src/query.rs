@@ -1,13 +1,12 @@
 mod check;
 mod check_list;
 mod item;
-mod store;
 
 use async_graphql::Context;
 
-use self::{check_list::CheckList, item::Item};
+use crate::infra::store::Store;
 
-pub use self::store::Store;
+use self::{check_list::CheckList, item::Item};
 
 pub struct QueryRoot;
 

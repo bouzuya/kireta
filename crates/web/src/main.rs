@@ -1,3 +1,4 @@
+mod infra;
 mod model;
 mod query;
 #[cfg(test)]
@@ -9,7 +10,7 @@ use axum::{
     response::{Html, IntoResponse},
     routing, Router, Server,
 };
-use query::Store;
+use infra::store::Store;
 
 async fn graphiql() -> impl IntoResponse {
     Html(GraphiQLSource::build().endpoint("/graphql").finish())
@@ -163,11 +164,33 @@ mod tests {
     #[tokio::test]
     async fn test_items_checked_check_lists() -> anyhow::Result<()> {
         // dummy data
-        test_query(
-            r#"{"query":"query { items { id, checkedCheckLists { id } } }"}"#,
-            r#"{"data":{"items":[{"id":"1","checkedCheckLists":[{"id":"1"}]},{"id":"2","checkedCheckLists":[{"id":"2"}]}]}}"#,
+        test_query3!(
+            {
+                "query": "query { items { id, checkedCheckLists { id } } }"
+            },
+            {
+                "data": {
+                    "items": [
+                        {
+                            "id": "1",
+                            "checkedCheckLists": [
+                                {
+                                    "id": "1"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "2",
+                            "checkedCheckLists": [
+                                {
+                                    "id": "2"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
         )
-        .await
     }
 
     #[tokio::test]
