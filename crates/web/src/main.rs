@@ -5,12 +5,20 @@ mod query;
 mod test_utils;
 
 use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
-use async_graphql_axum::GraphQL;
+use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
+    extract::State,
     response::{Html, IntoResponse},
     routing, Router, Server,
 };
 use infra::store::Store;
+
+async fn handler(
+    State(schema): State<Schema<query::QueryRoot, EmptyMutation, EmptySubscription>>,
+    request: GraphQLRequest,
+) -> GraphQLResponse {
+    GraphQLResponse::from(schema.execute(request.into_inner()).await)
+}
 
 async fn graphiql() -> impl IntoResponse {
     Html(GraphiQLSource::build().endpoint("/graphql").finish())
@@ -21,11 +29,9 @@ fn route() -> Router {
         .data(Store::example())
         .finish();
     Router::new()
-        .route(
-            "/graphql",
-            routing::get(graphiql).post_service(GraphQL::new(schema)),
-        )
+        .route("/graphql", routing::get(graphiql).post(handler))
         .route("/", routing::get(|| async { "Hello, World!" }))
+        .with_state(schema)
 }
 
 #[tokio::main]
@@ -166,7 +172,7 @@ mod tests {
         // dummy data
         test_query3!(
             {
-                "query": "query { items { id, checkedCheckLists { id } } }"
+                "query": "query { items { checkedCheckLists { id }, id } }"
             },
             {
                 "data": {
