@@ -8,6 +8,10 @@ use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Sche
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
     extract::State,
+    headers::{
+        authorization::{Bearer, Credentials},
+        HeaderMap,
+    },
     response::{Html, IntoResponse},
     routing, Router, Server,
 };
@@ -15,9 +19,14 @@ use infra::store::Store;
 
 async fn handler(
     State(schema): State<Schema<query::QueryRoot, EmptyMutation, EmptySubscription>>,
+    header_map: HeaderMap,
     request: GraphQLRequest,
 ) -> GraphQLResponse {
-    GraphQLResponse::from(schema.execute(request.into_inner()).await)
+    // TODO
+    let header_value = header_map.get(axum::http::header::AUTHORIZATION).unwrap();
+    // TODO:
+    let bearer = Bearer::decode(header_value).unwrap();
+    GraphQLResponse::from(schema.execute(request.into_inner().data(bearer)).await)
 }
 
 async fn graphiql() -> impl IntoResponse {
