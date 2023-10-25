@@ -3,6 +3,7 @@ mod check_list;
 mod item;
 
 use async_graphql::Context;
+use axum::headers::authorization::Bearer;
 
 use crate::infra::store::Store;
 
@@ -12,6 +13,11 @@ pub struct QueryRoot;
 
 #[async_graphql::Object]
 impl QueryRoot {
+    async fn bearer<'a>(&self, context: &Context<'a>) -> &'a str {
+        let bearer = context.data_unchecked::<Bearer>();
+        bearer.token()
+    }
+
     async fn hello(&self) -> &'static str {
         "Hello, World!"
     }

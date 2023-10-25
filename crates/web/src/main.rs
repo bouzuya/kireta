@@ -67,6 +67,27 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_bearer() -> anyhow::Result<()> {
+        let query = r#"{"query":"query { bearer }"}"#;
+        let expected = r#"{"data":{"bearer":"bearer1"}}"#;
+        let app = route();
+        let method = "POST";
+        let uri = "/graphql";
+        let body = query;
+        let body: axum::body::Body = body.into();
+        let request = axum::http::Request::builder()
+            .method(method)
+            .uri(uri)
+            .header(axum::http::header::CONTENT_TYPE, "application/json")
+            .header(axum::http::header::AUTHORIZATION, "Bearer bearer1")
+            .body(body)?;
+        let response = send_request(app, request).await?;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.into_body_as_string().await?, expected);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_hello() -> anyhow::Result<()> {
         test_query(
             r#"{"query":"query { hello }"}"#,
