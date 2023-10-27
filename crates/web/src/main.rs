@@ -1,6 +1,7 @@
 mod handler;
 mod infra;
 mod model;
+mod mutation;
 mod query;
 #[cfg(test)]
 mod test_utils;
@@ -121,12 +122,6 @@ mod tests {
         )
         .await?;
 
-        test_query(
-            r#"{"query":"query { __schema { mutationType { name } } }"}"#,
-            r#"{"data":{"__schema":{"mutationType":null}}}"#,
-        )
-        .await?;
-
         // <https://graphql.org/learn/introspection/>
         // r#"{"query":"query { __type(name: \"...\") { fields { name } } }"}"#,
         Ok(())
@@ -195,6 +190,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_mutation_sign_in() -> anyhow::Result<()> {
+        test_query3!(
+            {
+                "query": "mutation signIn($userId: String, $password: String) { signIn(userId: $userId, password: $password) }",
+                "variables": {
+                    "userId": "user1",
+                    "password": "password1"
+                }
+            },
+            {
+                "data": {
+                    "signIn": "user1:password1"
+                }
+            }
+        )
+    }
+
+    #[tokio::test]
     async fn test_schema() -> anyhow::Result<()> {
         test_query(
             r#"{"query":"query { __schema { queryType { name } } }"}"#,
@@ -204,7 +217,7 @@ mod tests {
 
         test_query(
             r#"{"query":"query { __schema { mutationType { name } } }"}"#,
-            r#"{"data":{"__schema":{"mutationType":null}}}"#,
+            r#"{"data":{"__schema":{"mutationType":{"name":"MutationRoot"}}}}"#,
         )
         .await?;
 
