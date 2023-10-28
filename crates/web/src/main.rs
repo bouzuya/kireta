@@ -8,10 +8,11 @@ mod test_utils;
 
 use axum::Server;
 use handler::route;
+use infra::store::InMemoryStore;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let app = route();
+    let app = route(InMemoryStore::example());
     Server::bind(&"0.0.0.0:3000".parse()?)
         .serve(app.into_make_service())
         .await?;
@@ -36,7 +37,7 @@ mod tests {
     async fn test_bearer() -> anyhow::Result<()> {
         let query = r#"{"query":"query { bearer }"}"#;
         let expected = r#"{"data":{"bearer":"bearer1"}}"#;
-        let app = route();
+        let app = route(InMemoryStore::example());
         let method = "POST";
         let uri = "/graphql";
         let body = query;
@@ -239,7 +240,7 @@ mod tests {
     where
         B: Into<axum::body::Body>,
     {
-        let app = route();
+        let app = route(InMemoryStore::example());
         let request = request("POST", "/graphql", query)?;
         let response = send_request(app, request).await?;
         assert_eq!(response.status(), StatusCode::OK);

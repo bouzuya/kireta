@@ -9,14 +9,14 @@ pub trait StoreTrait {
     async fn find_all_items(&self) -> Vec<model::Item>;
 }
 
-pub struct Store {
+pub struct InMemoryStore {
     check_lists: Vec<model::CheckList>,
     checks: Vec<model::Check>,
     items: Vec<model::Item>,
 }
 
 #[async_trait]
-impl StoreTrait for Store {
+impl StoreTrait for InMemoryStore {
     async fn find_all_check_lists(&self) -> Vec<model::CheckList> {
         self.check_lists.clone()
     }
@@ -30,7 +30,7 @@ impl StoreTrait for Store {
     }
 }
 
-impl Store {
+impl InMemoryStore {
     pub fn example() -> Self {
         Self {
             check_lists: vec![

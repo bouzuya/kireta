@@ -10,10 +10,7 @@ use axum::{
     routing, Router,
 };
 
-use crate::{
-    infra::store::{Store, StoreTrait},
-    mutation, query,
-};
+use crate::{infra::store::StoreTrait, mutation, query};
 
 async fn handler(
     State(schema): State<Schema<query::QueryRoot, mutation::MutationRoot, EmptySubscription>>,
@@ -35,9 +32,9 @@ async fn graphiql() -> impl IntoResponse {
 
 pub struct Data(pub Box<dyn StoreTrait + Send + Sync + 'static>);
 
-pub fn route() -> Router {
+pub fn route<T: StoreTrait + Send + Sync + 'static>(store: T) -> Router {
     let schema = Schema::build(query::QueryRoot, mutation::MutationRoot, EmptySubscription)
-        .data(Data(Box::new(Store::example())))
+        .data(Data(Box::new(store)))
         .finish();
     Router::new()
         .route("/graphql", routing::get(graphiql).post(handler))
