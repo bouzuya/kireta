@@ -1,6 +1,9 @@
 use async_graphql::Context;
 
-use crate::model::{self};
+use crate::{
+    handler::Data,
+    model::{self},
+};
 
 use super::check_list::CheckList;
 
@@ -18,7 +21,7 @@ impl Item {
     }
 
     async fn checked_check_lists(&self, context: &Context<'_>) -> Vec<CheckList> {
-        let store = context.data_unchecked::<crate::query::Store>();
+        let store = &context.data_unchecked::<Data>().0;
         let check_lists = store.find_all_check_lists().await;
         // TODO: Store::find_checks_by_item_id
         let checks = store.find_all_checks().await;

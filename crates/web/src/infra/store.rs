@@ -1,4 +1,13 @@
+use axum::async_trait;
+
 use crate::model;
+
+#[async_trait]
+pub trait StoreTrait {
+    async fn find_all_check_lists(&self) -> Vec<model::CheckList>;
+    async fn find_all_checks(&self) -> Vec<model::Check>;
+    async fn find_all_items(&self) -> Vec<model::Item>;
+}
 
 pub struct Store {
     check_lists: Vec<model::CheckList>,
@@ -6,19 +15,22 @@ pub struct Store {
     items: Vec<model::Item>,
 }
 
-impl Store {
-    pub async fn find_all_check_lists(&self) -> Vec<model::CheckList> {
+#[async_trait]
+impl StoreTrait for Store {
+    async fn find_all_check_lists(&self) -> Vec<model::CheckList> {
         self.check_lists.clone()
     }
 
-    pub async fn find_all_checks(&self) -> Vec<model::Check> {
+    async fn find_all_checks(&self) -> Vec<model::Check> {
         self.checks.clone()
     }
 
-    pub async fn find_all_items(&self) -> Vec<model::Item> {
+    async fn find_all_items(&self) -> Vec<model::Item> {
         self.items.clone()
     }
+}
 
+impl Store {
     pub fn example() -> Self {
         Self {
             check_lists: vec![

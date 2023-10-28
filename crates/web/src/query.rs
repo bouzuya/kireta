@@ -5,7 +5,7 @@ mod item;
 use async_graphql::Context;
 use axum::headers::authorization::Bearer;
 
-use crate::infra::store::Store;
+use crate::handler::Data;
 
 use self::{check_list::CheckList, item::Item};
 
@@ -26,8 +26,8 @@ impl QueryRoot {
         a + b
     }
 
-    async fn check_lists<'a>(&self, ctx: &Context<'a>) -> Vec<CheckList> {
-        let store = ctx.data_unchecked::<Store>();
+    async fn check_lists<'a>(&self, context: &Context<'a>) -> Vec<CheckList> {
+        let store = &context.data_unchecked::<Data>().0;
         store
             .find_all_check_lists()
             .await
@@ -37,7 +37,7 @@ impl QueryRoot {
     }
 
     async fn items<'a>(&self, ctx: &Context<'a>) -> Vec<Item> {
-        let store = ctx.data_unchecked::<Store>();
+        let store = &ctx.data_unchecked::<Data>().0;
         store.find_all_items().await.into_iter().map(Item).collect()
     }
 }
