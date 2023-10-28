@@ -7,13 +7,45 @@ mod query;
 mod test_utils;
 mod use_case;
 
+use async_graphql::{EmptySubscription, Schema};
 use axum::Server;
 use handler::route;
 use infra::store::InMemoryStore;
+use use_case::{HasSchema, HasStore};
+
+#[derive(Clone)]
+pub struct App {
+    schema: Schema<query::QueryRoot, mutation::MutationRoot, EmptySubscription>,
+    store: InMemoryStore,
+}
+
+impl App {
+    pub fn example() -> Self {
+        let schema =
+            Schema::build(query::QueryRoot, mutation::MutationRoot, EmptySubscription).finish();
+        Self {
+            schema,
+            store: InMemoryStore::example(),
+        }
+    }
+}
+
+impl HasSchema for App {
+    fn schema(&self) -> &Schema<query::QueryRoot, mutation::MutationRoot, EmptySubscription> {
+        &self.schema
+    }
+}
+
+impl HasStore for App {
+    type Store = InMemoryStore;
+    fn store(&self) -> Self::Store {
+        self.store.clone()
+    }
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let app = route(InMemoryStore::example());
+    let app = route(App::example());
     Server::bind(&"0.0.0.0:3000".parse()?)
         .serve(app.into_make_service())
         .await?;
@@ -38,7 +70,7 @@ mod tests {
     async fn test_bearer() -> anyhow::Result<()> {
         let query = r#"{"query":"query { bearer }"}"#;
         let expected = r#"{"data":{"bearer":"bearer1"}}"#;
-        let app = route(InMemoryStore::example());
+        let app = route(App::example());
         let method = "POST";
         let uri = "/graphql";
         let body = query;
@@ -241,7 +273,7 @@ mod tests {
     where
         B: Into<axum::body::Body>,
     {
-        let app = route(InMemoryStore::example());
+        let app = route(App::example());
         let request = request("POST", "/graphql", query)?;
         let response = send_request(app, request).await?;
         assert_eq!(response.status(), StatusCode::OK);

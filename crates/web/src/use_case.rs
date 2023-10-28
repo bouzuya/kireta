@@ -12,5 +12,10 @@ pub trait StoreTrait {
 
 pub trait HasSchema {
     // TODO: query, mutation, subscription
-    fn schema(&self) -> Schema<query::QueryRoot, mutation::MutationRoot, EmptySubscription>;
+    fn schema(&self) -> &Schema<query::QueryRoot, mutation::MutationRoot, EmptySubscription>;
+}
+
+pub trait HasStore {
+    type Store: StoreTrait + Send + Sync + 'static;
+    fn store(&self) -> Self::Store;
 }

@@ -1,4 +1,4 @@
-use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
+use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
     extract::State,
@@ -10,24 +10,23 @@ use axum::{
     routing, Router,
 };
 
-use crate::{
-    mutation, query,
-    use_case::{HasSchema, StoreTrait},
-};
+use crate::use_case::{HasSchema, HasStore, StoreTrait};
 
-async fn handler<T: HasSchema>(
+async fn handler<T: HasSchema + HasStore>(
     State(state): State<T>,
     header_map: HeaderMap,
     request: GraphQLRequest,
 ) -> GraphQLResponse {
     let schema = state.schema();
-    let req = if let Some(header_value) = header_map.get(axum::http::header::AUTHORIZATION) {
+    let store = state.store();
+    let request = request.into_inner().data(Data(Box::new(store)));
+    let request = if let Some(header_value) = header_map.get(axum::http::header::AUTHORIZATION) {
         let bearer = Bearer::decode(header_value).unwrap();
-        request.into_inner().data(bearer)
+        request.data(bearer)
     } else {
-        request.into_inner()
+        request
     };
-    GraphQLResponse::from(schema.execute(req).await)
+    GraphQLResponse::from(schema.execute(request).await)
 }
 
 async fn graphiql() -> impl IntoResponse {
@@ -36,24 +35,9 @@ async fn graphiql() -> impl IntoResponse {
 
 pub struct Data(pub Box<dyn StoreTrait + Send + Sync + 'static>);
 
-#[derive(Clone)]
-pub struct MyState {
-    schema: Schema<query::QueryRoot, mutation::MutationRoot, EmptySubscription>,
-}
-
-impl HasSchema for MyState {
-    fn schema(&self) -> Schema<query::QueryRoot, mutation::MutationRoot, EmptySubscription> {
-        self.schema.clone()
-    }
-}
-
-pub fn route<T: StoreTrait + Send + Sync + 'static>(store: T) -> Router {
-    let schema = Schema::build(query::QueryRoot, mutation::MutationRoot, EmptySubscription)
-        .data(Data(Box::new(store)))
-        .finish();
-    let state = MyState { schema };
+pub fn route<T: Clone + HasSchema + HasStore + Send + Sync + 'static>(store: T) -> Router {
     Router::new()
-        .route("/graphql", routing::get(graphiql).post(handler::<MyState>))
+        .route("/graphql", routing::get(graphiql).post(handler::<T>))
         .route("/", routing::get(|| async { "Hello, World!" }))
-        .with_state(state)
+        .with_state(store)
 }
