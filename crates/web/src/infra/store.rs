@@ -1,14 +1,8 @@
 use axum::async_trait;
 
-use crate::model;
+use crate::{model, use_case::StoreTrait};
 
-#[async_trait]
-pub trait StoreTrait {
-    async fn find_all_check_lists(&self) -> Vec<model::CheckList>;
-    async fn find_all_checks(&self) -> Vec<model::Check>;
-    async fn find_all_items(&self) -> Vec<model::Item>;
-}
-
+#[derive(Clone, Debug)]
 pub struct InMemoryStore {
     check_lists: Vec<model::CheckList>,
     checks: Vec<model::Check>,

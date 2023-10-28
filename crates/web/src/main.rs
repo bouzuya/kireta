@@ -5,6 +5,7 @@ mod mutation;
 mod query;
 #[cfg(test)]
 mod test_utils;
+mod use_case;
 
 use axum::Server;
 use handler::route;
