@@ -1,3 +1,4 @@
+mod app;
 mod handler;
 mod infra;
 mod model;
@@ -7,41 +8,9 @@ mod query;
 mod test_utils;
 mod use_case;
 
-use async_graphql::{EmptySubscription, Schema};
+use app::App;
 use axum::Server;
 use handler::route;
-use infra::store::InMemoryStore;
-use use_case::{HasSchema, HasStore};
-
-#[derive(Clone)]
-pub struct App {
-    schema: Schema<query::QueryRoot, mutation::MutationRoot, EmptySubscription>,
-    store: InMemoryStore,
-}
-
-impl App {
-    pub fn example() -> Self {
-        let schema =
-            Schema::build(query::QueryRoot, mutation::MutationRoot, EmptySubscription).finish();
-        Self {
-            schema,
-            store: InMemoryStore::example(),
-        }
-    }
-}
-
-impl HasSchema for App {
-    fn schema(&self) -> &Schema<query::QueryRoot, mutation::MutationRoot, EmptySubscription> {
-        &self.schema
-    }
-}
-
-impl HasStore for App {
-    type Store = InMemoryStore;
-    fn store(&self) -> Self::Store {
-        self.store.clone()
-    }
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
