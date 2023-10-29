@@ -35,6 +35,12 @@ mod tests {
         };
     }
 
+    macro_rules! test {
+        ($a:expr, $q:tt, $e:tt) => {
+            test($a, json!($q), json!($e)).await
+        };
+    }
+
     #[tokio::test]
     async fn test_bearer() -> anyhow::Result<()> {
         let query = r#"{"query":"query { bearer }"}"#;
@@ -58,16 +64,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_hello() -> anyhow::Result<()> {
-        test_query(
-            r#"{"query":"query { hello }"}"#,
-            r#"{"data":{"hello":"Hello, World!"}}"#,
-        )
-        .await
-    }
-
-    #[tokio::test]
-    async fn test_hello_json() -> anyhow::Result<()> {
-        test_query3!(
+        test!(
+            App::example(),
             {
                 "query": "query { hello }"
             },
@@ -81,16 +79,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_add() -> anyhow::Result<()> {
-        test_query(
-            r#"{"query":"query { add(a: 1, b: 2) }"}"#,
-            r#"{"data":{"add":3}}"#,
+        test!(
+            App::example(),
+            {
+                "query": "query { add(a: 1, b: 2) }"
+            },
+            {
+                "data": {
+                    "add": 3
+                }
+            }
         )
-        .await
     }
 
     #[tokio::test]
     async fn test_add_graphql() -> anyhow::Result<()> {
-        test_query3!(
+        test!(
+            App::example(),
             {
                 "query": include_str!("../graphql/test_add.graphql"),
                 "variables": {
@@ -108,22 +113,53 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_list_schema() -> anyhow::Result<()> {
-        test_query(
-            r#"{"query":"query { __type(name: \"CheckList\") { name, description, kind } }"}"#,
-            r#"{"data":{"__type":{"name":"CheckList","description":"check list","kind":"OBJECT"}}}"#,
-        )
-        .await?;
-        test_query(
-            r#"{"query":"query { __type(name: \"CheckList\") { fields { name } } }"}"#,
-            r#"{"data":{"__type":{"fields":[{"name":"id"},{"name":"date"},{"name":"checkedItems"}]}}}"#,
-        )
-        .await?;
-
-        test_query(
-            r#"{"query":"query { __schema { queryType { name } } }"}"#,
-            r#"{"data":{"__schema":{"queryType":{"name":"QueryRoot"}}}}"#,
-        )
-        .await?;
+        test!(
+            App::example(),
+            {
+                "query": r#"query { __type(name: "CheckList") { description, kind, name } }"#
+            },
+            {
+                "data":{
+                    "__type":{
+                        "description": "check list",
+                        "kind": "OBJECT",
+                        "name": "CheckList",
+                    }
+                }
+            }
+        )?;
+        test!(
+            App::example(),
+            {
+                "query": r#"query { __type(name: "CheckList") { fields { name } } }"#
+            },
+            {
+                "data": {
+                    "__type": {
+                        "fields": [
+                            { "name": "id" },
+                            { "name": "date" },
+                            { "name": "checkedItems" }
+                        ]
+                    }
+                }
+            }
+        )?;
+        test!(
+            App::example(),
+            {
+                "query": "query { __schema { queryType { name } } }"
+            },
+            {
+                "data": {
+                    "__schema": {
+                        "queryType": {
+                            "name": "QueryRoot"
+                        }
+                    }
+                }
+            }
+        )?;
 
         // <https://graphql.org/learn/introspection/>
         // r#"{"query":"query { __type(name: \"...\") { fields { name } } }"}"#,
@@ -255,5 +291,21 @@ mod tests {
         expected: serde_json::Value,
     ) -> anyhow::Result<()> {
         test_query(query.to_string(), expected.to_string().as_str()).await
+    }
+
+    async fn test(
+        app: App,
+        request_body: serde_json::Value,
+        response_body: serde_json::Value,
+    ) -> anyhow::Result<()> {
+        let app = route(app);
+        let request = request("POST", "/graphql", request_body.to_string())?;
+        let response = send_request(app, request).await?;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.into_body_as_string().await?,
+            response_body.to_string()
+        );
+        Ok(())
     }
 }
