@@ -7,3 +7,8 @@ services:
     tty: true
     volumes:
       - .:/home/node
+  firebase:
+    build: ./firebase/
+    tty: true
+    volumes:
+      - ./firebase:/firebase
