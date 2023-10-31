@@ -12,3 +12,10 @@ services:
     tty: true
     volumes:
       - ./firebase:/firebase
+  rust:
+    build: ./rust/
+    ports:
+      - "3000:3000"
+    tty: true
+    volumes:
+      - ./rust:/rust
