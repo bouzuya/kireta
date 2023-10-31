@@ -5,7 +5,8 @@
         "GitHub.copilot",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "ms-azuretools.vscode-docker"
+        "ms-azuretools.vscode-docker",
+        "rust-lang.rust-analyzer"
       ],
       "settings": {
         "prettier.trailingComma": "all",
@@ -15,6 +16,8 @@
   },
   "dockerComposeFile": "../compose.yaml",
   "name": "kireta_workspace",
-  "service": "android",
-  "workspaceFolder": "/home/node"
+  // "service": "android",
+  // "workspaceFolder": "/home/node"
+  "service": "rust",
+  "workspaceFolder": "/rust"
 }
