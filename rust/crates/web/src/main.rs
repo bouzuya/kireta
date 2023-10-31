@@ -42,6 +42,51 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_firebase() -> anyhow::Result<()> {
+        let project_id = std::env::var("PROJECT_ID")?;
+        // let project_id = "demo-project1";
+
+        let json_path_as_str = std::env::var("GOOGLE_APPLICATION_CREDENTIALS")?;
+
+        let credentials = google_authz::Credentials::builder()
+            // .no_credentials()
+            .json_file(std::path::Path::new(json_path_as_str.as_str()))
+            .build()
+            .await?;
+        let channel = tonic::transport::Channel::from_static("https://firestore.googleapis.com")
+            .connect()
+            .await?;
+        let channel = google_authz::GoogleAuthz::builder(channel)
+            .credentials(credentials)
+            .build()
+            .await;
+
+        let database_id = "(default)";
+        let collection_name = "users";
+
+        let mut client =
+            google_api_proto::google::firestore::v1::firestore_client::FirestoreClient::new(
+                channel,
+            );
+
+        let response = client
+            .list_documents(tonic::Request::new(
+                google_api_proto::google::firestore::v1::ListDocumentsRequest {
+                    parent: format!(
+                        "projects/{}/databases/{}/documents",
+                        project_id, database_id
+                    ),
+                    collection_id: collection_name.to_owned(),
+                    page_size: 100,
+                    ..Default::default()
+                },
+            ))
+            .await?;
+        println!("response = {:#?}", response);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_bearer() -> anyhow::Result<()> {
         let query = r#"{"query":"query { bearer }"}"#;
         let expected = r#"{"data":{"bearer":"bearer1"}}"#;

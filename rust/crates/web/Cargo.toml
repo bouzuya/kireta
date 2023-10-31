@@ -10,8 +10,12 @@ anyhow = "1.0.75"
 async-graphql = "6.0.5"
 async-graphql-axum = "6.0.5"
 axum = "0.6.20"
+features = "0.10.0"
+google-api-proto = { version = "1.415.0", features = ["google-firestore-v1"] }
+google-authz = { version = "1.0.0-alpha.5", features = ["tonic"] }
 hyper = { version = "0.14.27", features = ["full"] }
 tokio = { version = "1.32.0", features = ["full"] }
+tonic = { version = "0.10.2", features = ["tls-webpki-roots"] }
 tower = "0.4.13"
 
 [dev-dependencies]
