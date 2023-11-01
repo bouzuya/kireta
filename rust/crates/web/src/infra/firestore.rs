@@ -4,7 +4,17 @@ use google_api_proto::google::firestore::v1::{
     firestore_client::FirestoreClient, CreateDocumentRequest, Document, Value,
 };
 use google_authz::{Credentials, GoogleAuthz};
-use tonic::{transport::Channel, Request, Status};
+use tonic::{transport::Channel, Request};
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("credentials {0}")]
+    Credentials(#[from] google_authz::CredentialsError),
+    #[error("transport {0}")]
+    Transport(#[from] tonic::transport::Error),
+    #[error("status {0}")]
+    Status(#[from] tonic::Status),
+}
 
 pub struct Client {
     client: FirestoreClient<GoogleAuthz<Channel>>,
@@ -17,7 +27,7 @@ impl Client {
         project_id: String,
         database_id: String,
         endpoint: &'static str,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, Error> {
         let credentials = Credentials::builder().no_credentials().build().await?;
         let channel = Channel::from_static(endpoint).connect().await?;
         let channel = GoogleAuthz::builder(channel)
@@ -36,8 +46,9 @@ impl Client {
         &mut self,
         collection_id: String,
         fields: BTreeMap<String, Value>,
-    ) -> Result<Document, Status> {
-        self.client
+    ) -> Result<Document, Error> {
+        Ok(self
+            .client
             .create_document(Request::new(CreateDocumentRequest {
                 parent: format!(
                     "projects/{}/databases/{}/documents",
@@ -53,8 +64,8 @@ impl Client {
                 }),
                 mask: None,
             }))
-            .await
-            .map(|response| response.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
