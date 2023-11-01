@@ -23,6 +23,16 @@ async fn main() -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
+    use anyhow::Context;
+    use google_api_proto::google::firestore::v1::firestore_client::FirestoreClient;
+    use google_api_proto::google::firestore::v1::precondition::ConditionType;
+    use google_api_proto::google::firestore::v1::ListDocumentsRequest;
+    use google_api_proto::google::firestore::v1::{
+        value::ValueType, CreateDocumentRequest, DeleteDocumentRequest, Document,
+        GetDocumentRequest, Precondition, UpdateDocumentRequest, Value,
+    };
     use serde_json::json;
 
     use crate::test_utils::{request, send_request, ResponseExt, StatusCode};
@@ -43,17 +53,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_firebase() -> anyhow::Result<()> {
-        let project_id = std::env::var("PROJECT_ID")?;
-        // let project_id = "demo-project1";
-
-        let json_path_as_str = std::env::var("GOOGLE_APPLICATION_CREDENTIALS")?;
-
+        let project_id = "demo-project1";
         let credentials = google_authz::Credentials::builder()
-            // .no_credentials()
-            .json_file(std::path::Path::new(json_path_as_str.as_str()))
+            .no_credentials()
             .build()
             .await?;
-        let channel = tonic::transport::Channel::from_static("https://firestore.googleapis.com")
+        let channel = tonic::transport::Channel::from_static("http://firebase:8080")
             .connect()
             .await?;
         let channel = google_authz::GoogleAuthz::builder(channel)
@@ -64,25 +69,146 @@ mod tests {
         let database_id = "(default)";
         let collection_name = "users";
 
-        let mut client =
-            google_api_proto::google::firestore::v1::firestore_client::FirestoreClient::new(
-                channel,
-            );
+        let mut client = FirestoreClient::new(channel);
 
+        // reset
         let response = client
-            .list_documents(tonic::Request::new(
-                google_api_proto::google::firestore::v1::ListDocumentsRequest {
-                    parent: format!(
-                        "projects/{}/databases/{}/documents",
-                        project_id, database_id
-                    ),
-                    collection_id: collection_name.to_owned(),
-                    page_size: 100,
-                    ..Default::default()
-                },
-            ))
+            .list_documents(tonic::Request::new(ListDocumentsRequest {
+                parent: format!(
+                    "projects/{}/databases/{}/documents",
+                    project_id, database_id
+                ),
+                collection_id: collection_name.to_owned(),
+                page_size: 100,
+                ..Default::default()
+            }))
             .await?;
-        println!("response = {:#?}", response);
+        let list = response.into_inner();
+        for doc in list.documents {
+            client
+                .delete_document(tonic::Request::new(DeleteDocumentRequest {
+                    name: doc.name,
+                    current_document: None,
+                }))
+                .await?;
+        }
+
+        // CREATE
+        let response = client
+            .create_document(tonic::Request::new(CreateDocumentRequest {
+                parent: format!(
+                    "projects/{}/databases/{}/documents",
+                    project_id, database_id
+                ),
+                collection_id: collection_name.to_owned(),
+                document_id: "".to_owned(),
+                document: Some(Document {
+                    name: "".to_owned(),
+                    fields: {
+                        let mut fields = BTreeMap::new();
+                        fields.insert(
+                            "k1".to_owned(),
+                            Value {
+                                value_type: Some(ValueType::StringValue("v1".to_owned())),
+                            },
+                        );
+                        fields
+                    },
+                    create_time: None,
+                    update_time: None,
+                }),
+                mask: None,
+            }))
+            .await?;
+        let created = response.into_inner();
+        assert!(created
+            .name
+            .starts_with("projects/demo-project1/databases/(default)/documents/users/"),);
+        assert_eq!(created.fields, {
+            let mut fields = BTreeMap::new();
+            fields.insert(
+                "k1".to_owned(),
+                Value {
+                    value_type: Some(ValueType::StringValue("v1".to_owned())),
+                },
+            );
+            fields
+        });
+        assert!(created.create_time.is_some());
+        assert!(created.update_time.is_some());
+
+        // READ (GET)
+        let response = client
+            .get_document(tonic::Request::new(GetDocumentRequest {
+                name: created.name.clone(),
+                mask: None,
+                consistency_selector: None,
+            }))
+            .await?;
+        let got = response.into_inner();
+        assert_eq!(got, created);
+
+        // READ (LIST)
+        let response = client
+            .list_documents(tonic::Request::new(ListDocumentsRequest {
+                parent: format!(
+                    "projects/{}/databases/{}/documents",
+                    project_id, database_id
+                ),
+                collection_id: collection_name.to_owned(),
+                page_size: 100,
+                ..Default::default()
+            }))
+            .await?;
+        let list = response.into_inner();
+        assert_eq!(list.documents, vec![got.clone()]);
+        assert_eq!(list.next_page_token, "");
+
+        // UPDATE
+        let response = client
+            .update_document(tonic::Request::new(UpdateDocumentRequest {
+                document: Some(Document {
+                    fields: {
+                        let mut fields = BTreeMap::new();
+                        fields.insert(
+                            "k1".to_owned(),
+                            Value {
+                                value_type: Some(ValueType::StringValue("v2".to_owned())),
+                            },
+                        );
+                        fields
+                    },
+                    ..got.clone()
+                }),
+                update_mask: None,
+                mask: None,
+                current_document: Some(Precondition {
+                    condition_type: Some(ConditionType::UpdateTime(
+                        got.update_time.context("update_time")?,
+                    )),
+                }),
+            }))
+            .await?;
+        let updated = response.into_inner();
+        assert_eq!(
+            updated.fields.get("k1"),
+            Some(&Value {
+                value_type: Some(ValueType::StringValue("v2".to_owned()))
+            })
+        );
+
+        // DELETE
+        client
+            .delete_document(tonic::Request::new(DeleteDocumentRequest {
+                name: updated.name,
+                current_document: Some(Precondition {
+                    condition_type: Some(ConditionType::UpdateTime(
+                        updated.update_time.context("update_time")?,
+                    )),
+                }),
+            }))
+            .await?;
+
         Ok(())
     }
 
