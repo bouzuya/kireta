@@ -1,9 +1,11 @@
 use std::collections::BTreeMap;
 
 use google_api_proto::google::firestore::v1::{
-    firestore_client::FirestoreClient, CreateDocumentRequest, Document, Value,
+    firestore_client::FirestoreClient, precondition::ConditionType, CreateDocumentRequest,
+    DeleteDocumentRequest, Document, Precondition, Value,
 };
 use google_authz::{Credentials, GoogleAuthz};
+use prost_types::Timestamp;
 use tonic::{transport::Channel, Request};
 
 #[derive(Debug, thiserror::Error)]
@@ -67,14 +69,31 @@ impl Client {
             .await?
             .into_inner())
     }
+
+    pub async fn delete(
+        &mut self,
+        // `projects/{project_id}/databases/{database_id}/documents/{document_path}`.
+        name: String,
+        current_update_time: Timestamp,
+    ) -> Result<(), Error> {
+        self.client
+            .delete_document(Request::new(DeleteDocumentRequest {
+                name,
+                current_document: Some(Precondition {
+                    condition_type: Some(ConditionType::UpdateTime(current_update_time)),
+                }),
+            }))
+            .await?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use anyhow::Context;
     use google_api_proto::google::firestore::v1::{
-        precondition::ConditionType, value::ValueType, DeleteDocumentRequest, GetDocumentRequest,
-        ListDocumentsRequest, Precondition, UpdateDocumentRequest,
+        precondition::ConditionType, value::ValueType, GetDocumentRequest, ListDocumentsRequest,
+        Precondition, UpdateDocumentRequest,
     };
 
     use super::*;
@@ -116,11 +135,8 @@ mod tests {
             .await?;
         let list = response.into_inner();
         for doc in list.documents {
-            client
-                .delete_document(tonic::Request::new(DeleteDocumentRequest {
-                    name: doc.name,
-                    current_document: None,
-                }))
+            client2
+                .delete(doc.name, doc.update_time.context("update_time")?)
                 .await?;
         }
 
@@ -210,15 +226,8 @@ mod tests {
         );
 
         // DELETE
-        client
-            .delete_document(tonic::Request::new(DeleteDocumentRequest {
-                name: updated.name,
-                current_document: Some(Precondition {
-                    condition_type: Some(ConditionType::UpdateTime(
-                        updated.update_time.context("update_time")?,
-                    )),
-                }),
-            }))
+        client2
+            .delete(updated.name, updated.update_time.context("update_time")?)
             .await?;
 
         Ok(())

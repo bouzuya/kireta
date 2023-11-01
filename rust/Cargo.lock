@@ -2092,6 +2092,7 @@ dependencies = [
  "google-api-proto",
  "google-authz",
  "hyper",
+ "prost-types",
  "serde_json",
  "thiserror",
  "tokio",
