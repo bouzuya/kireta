@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use google_api_proto::google::firestore::v1::{
     firestore_client::FirestoreClient, precondition::ConditionType, CreateDocumentRequest,
-    DeleteDocumentRequest, Document, Precondition, Value,
+    DeleteDocumentRequest, Document, GetDocumentRequest, Precondition, Value,
 };
 use google_authz::{Credentials, GoogleAuthz};
 use prost_types::Timestamp;
@@ -49,7 +49,7 @@ impl Client {
         collection_id: String,
         fields: BTreeMap<String, Value>,
     ) -> Result<Document, Error> {
-        Ok(self
+        let response = self
             .client
             .create_document(Request::new(CreateDocumentRequest {
                 parent: format!(
@@ -66,8 +66,8 @@ impl Client {
                 }),
                 mask: None,
             }))
-            .await?
-            .into_inner())
+            .await?;
+        Ok(response.into_inner())
     }
 
     pub async fn delete(
@@ -86,14 +86,31 @@ impl Client {
             .await?;
         Ok(())
     }
+
+    pub async fn get(
+        &mut self,
+        // `projects/{project_id}/databases/{database_id}/documents/{document_path}`.
+        name: String,
+        // TODO: support transaction
+    ) -> Result<Document, Error> {
+        let response = self
+            .client
+            .get_document(tonic::Request::new(GetDocumentRequest {
+                name,
+                mask: None,
+                consistency_selector: None,
+            }))
+            .await?;
+        Ok(response.into_inner())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use anyhow::Context;
     use google_api_proto::google::firestore::v1::{
-        precondition::ConditionType, value::ValueType, GetDocumentRequest, ListDocumentsRequest,
-        Precondition, UpdateDocumentRequest,
+        precondition::ConditionType, value::ValueType, ListDocumentsRequest, Precondition,
+        UpdateDocumentRequest,
     };
 
     use super::*;
@@ -166,14 +183,7 @@ mod tests {
         assert!(created.update_time.is_some());
 
         // READ (GET)
-        let response = client
-            .get_document(tonic::Request::new(GetDocumentRequest {
-                name: created.name.clone(),
-                mask: None,
-                consistency_selector: None,
-            }))
-            .await?;
-        let got = response.into_inner();
+        let got = client2.get(created.name.clone()).await?;
         assert_eq!(got, created);
 
         // READ (LIST)
