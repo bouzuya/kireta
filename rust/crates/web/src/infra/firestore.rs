@@ -1,18 +1,20 @@
-use std::collections::BTreeMap;
-
 use google_api_proto::google::firestore::v1::{
-    firestore_client::FirestoreClient, precondition::ConditionType, CreateDocumentRequest,
-    DeleteDocumentRequest, Document, GetDocumentRequest, ListDocumentsRequest,
-    ListDocumentsResponse, Precondition, UpdateDocumentRequest, Value,
+    firestore_client::FirestoreClient, precondition::ConditionType, value::ValueType,
+    CreateDocumentRequest, DeleteDocumentRequest, Document, GetDocumentRequest,
+    ListDocumentsRequest, ListDocumentsResponse, MapValue, Precondition, UpdateDocumentRequest,
 };
 use google_authz::{Credentials, GoogleAuthz};
 use prost_types::Timestamp;
+use serde::Serialize;
+use serde_firestore_value::to_value;
 use tonic::{transport::Channel, Request};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("credentials {0}")]
     Credentials(#[from] google_authz::CredentialsError),
+    #[error("serialize {0}")]
+    Serialize(#[from] serde_firestore_value::Error),
     #[error("status {0}")]
     Status(#[from] tonic::Status),
     #[error("transport {0}")]
@@ -49,11 +51,10 @@ impl Client {
         })
     }
 
-    pub async fn create(
-        &mut self,
-        collection_id: String,
-        fields: BTreeMap<String, Value>,
-    ) -> Result<Document, Error> {
+    pub async fn create<V>(&mut self, collection_id: String, fields: V) -> Result<Document, Error>
+    where
+        V: Serialize,
+    {
         let response = self
             .client
             .create_document(Request::new(CreateDocumentRequest {
@@ -65,7 +66,14 @@ impl Client {
                 document_id: "".to_string(),
                 document: Some(Document {
                     name: "".to_string(),
-                    fields,
+                    fields: {
+                        let ser = to_value(&fields)?;
+                        if let Some(ValueType::MapValue(MapValue { fields })) = ser.value_type {
+                            fields
+                        } else {
+                            panic!("unexpected value_type: {:?}", ser.value_type);
+                        }
+                    },
                     create_time: None,
                     update_time: None,
                 }),
@@ -128,15 +136,31 @@ impl Client {
         Ok(response.into_inner())
     }
 
-    pub async fn update(
+    pub async fn update<V>(
         &mut self,
-        document: Document,
+        name: String,
+        fields: V,
         current_update_time: Timestamp,
-    ) -> Result<Document, Error> {
+    ) -> Result<Document, Error>
+    where
+        V: Serialize,
+    {
         let response = self
             .client
             .update_document(Request::new(UpdateDocumentRequest {
-                document: Some(document),
+                document: Some(Document {
+                    name,
+                    fields: {
+                        let ser = to_value(&fields)?;
+                        if let Some(ValueType::MapValue(MapValue { fields })) = ser.value_type {
+                            fields
+                        } else {
+                            panic!("unexpected value_type: {:?}", ser.value_type);
+                        }
+                    },
+                    create_time: None,
+                    update_time: None,
+                }),
                 update_mask: None,
                 mask: None,
                 current_document: Some(Precondition {
@@ -150,8 +174,10 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use anyhow::Context;
-    use google_api_proto::google::firestore::v1::value::ValueType;
+    use google_api_proto::google::firestore::v1::{value::ValueType, Value};
 
     use super::*;
 
@@ -174,14 +200,18 @@ mod tests {
         }
 
         // CREATE
-        let mut fields = BTreeMap::new();
-        fields.insert(
-            "k1".to_owned(),
-            Value {
-                value_type: Some(ValueType::StringValue("v1".to_owned())),
-            },
-        );
-        let created = client.create(collection_name.to_string(), fields).await?;
+        #[derive(serde::Serialize)]
+        struct V {
+            k1: String,
+        }
+        let created = client
+            .create(
+                collection_name.to_string(),
+                V {
+                    k1: "v1".to_owned(),
+                },
+            )
+            .await?;
         assert!(created
             .name
             .starts_with("projects/demo-project1/databases/(default)/documents/repositories/"),);
@@ -210,18 +240,9 @@ mod tests {
         // UPDATE
         let updated = client
             .update(
-                Document {
-                    fields: {
-                        let mut fields = BTreeMap::new();
-                        fields.insert(
-                            "k1".to_owned(),
-                            Value {
-                                value_type: Some(ValueType::StringValue("v2".to_owned())),
-                            },
-                        );
-                        fields
-                    },
-                    ..got.clone()
+                got.name.clone(),
+                V {
+                    k1: "v2".to_owned(), // "v1" -> "v2
                 },
                 got.update_time.context("update_time")?,
             )

@@ -1437,18 +1437,31 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.188"
+version = "1.0.190"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf9e0fcba69a370eed61bcf2b728575f726b50b55cba78064753d708ddc7549e"
+checksum = "91d3c334ca1ee894a2c6f6ad698fe8c435b76d504b13d436f0685d648d6d96f7"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
-name = "serde_derive"
-version = "1.0.188"
+name = "serde-firestore-value"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4eca7ac642d82aa35b60049a6eccb4be6be75e599bd2e9adb5f875a737654af2"
+checksum = "b2c28bd3a5a8af29f29ed9dd2e9b6c4b366b1af2abc95bc42b58364cbbeaaf28"
+dependencies = [
+ "google-api-proto",
+ "prost",
+ "prost-types",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "serde_derive"
+version = "1.0.190"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67c5609f394e5c2bd7fc51efda478004ea80ef42fee983d5c67a65e34f32c0e3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2093,6 +2106,8 @@ dependencies = [
  "google-authz",
  "hyper",
  "prost-types",
+ "serde",
+ "serde-firestore-value",
  "serde_json",
  "thiserror",
  "tokio",
