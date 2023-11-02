@@ -1,18 +1,25 @@
+mod document;
+
 use google_api_proto::google::firestore::v1::{
     firestore_client::FirestoreClient, precondition::ConditionType, value::ValueType,
-    CreateDocumentRequest, DeleteDocumentRequest, Document, GetDocumentRequest,
-    ListDocumentsRequest, ListDocumentsResponse, MapValue, Precondition, UpdateDocumentRequest,
+    CreateDocumentRequest, DeleteDocumentRequest, Document as FirestoreDocument,
+    GetDocumentRequest, ListDocumentsRequest, ListDocumentsResponse, MapValue, Precondition,
+    UpdateDocumentRequest,
 };
 use google_authz::{Credentials, GoogleAuthz};
 use prost_types::Timestamp;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 use serde_firestore_value::to_value;
 use tonic::{transport::Channel, Request};
+
+use self::document::Document;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("credentials {0}")]
     Credentials(#[from] google_authz::CredentialsError),
+    #[error("deserialize {0}")]
+    Deserialize(#[from] document::Error),
     #[error("serialize {0}")]
     Serialize(#[from] serde_firestore_value::Error),
     #[error("status {0}")]
@@ -51,9 +58,14 @@ impl Client {
         })
     }
 
-    pub async fn create<V>(&mut self, collection_id: String, fields: V) -> Result<Document, Error>
+    pub async fn create<T, U>(
+        &mut self,
+        collection_id: String,
+        fields: T,
+    ) -> Result<Document<U>, Error>
     where
-        V: Serialize,
+        T: Serialize,
+        U: DeserializeOwned,
     {
         let response = self
             .client
@@ -64,7 +76,7 @@ impl Client {
                 ),
                 collection_id,
                 document_id: "".to_string(),
-                document: Some(Document {
+                document: Some(FirestoreDocument {
                     name: "".to_string(),
                     fields: {
                         let ser = to_value(&fields)?;
@@ -80,7 +92,7 @@ impl Client {
                 mask: None,
             }))
             .await?;
-        Ok(response.into_inner())
+        Document::new(response.into_inner()).map_err(Error::Deserialize)
     }
 
     pub async fn delete(
@@ -100,12 +112,15 @@ impl Client {
         Ok(())
     }
 
-    pub async fn get(
+    pub async fn get<U>(
         &mut self,
         // `projects/{project_id}/databases/{database_id}/documents/{document_path}`.
         name: String,
         // TODO: support transaction
-    ) -> Result<Document, Error> {
+    ) -> Result<Document<U>, Error>
+    where
+        U: DeserializeOwned,
+    {
         let response = self
             .client
             .get_document(Request::new(GetDocumentRequest {
@@ -114,7 +129,7 @@ impl Client {
                 consistency_selector: None,
             }))
             .await?;
-        Ok(response.into_inner())
+        Document::new(response.into_inner()).map_err(Error::Deserialize)
     }
 
     pub async fn list(
@@ -136,19 +151,20 @@ impl Client {
         Ok(response.into_inner())
     }
 
-    pub async fn update<V>(
+    pub async fn update<T, U>(
         &mut self,
         name: String,
-        fields: V,
+        fields: T,
         current_update_time: Timestamp,
-    ) -> Result<Document, Error>
+    ) -> Result<Document<U>, Error>
     where
-        V: Serialize,
+        T: Serialize,
+        U: DeserializeOwned,
     {
         let response = self
             .client
             .update_document(Request::new(UpdateDocumentRequest {
-                document: Some(Document {
+                document: Some(FirestoreDocument {
                     name,
                     fields: {
                         let ser = to_value(&fields)?;
@@ -168,16 +184,13 @@ impl Client {
                 }),
             }))
             .await?;
-        Ok(response.into_inner())
+        Document::new(response.into_inner()).map_err(Error::Deserialize)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
-
     use anyhow::Context;
-    use google_api_proto::google::firestore::v1::{value::ValueType, Value};
 
     use super::*;
 
@@ -200,63 +213,57 @@ mod tests {
         }
 
         // CREATE
-        #[derive(serde::Serialize)]
+        #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
         struct V {
             k1: String,
         }
+        let input = V {
+            k1: "v1".to_string(),
+        };
         let created = client
-            .create(
-                collection_name.to_string(),
-                V {
-                    k1: "v1".to_owned(),
-                },
-            )
+            .create(collection_name.to_string(), input.clone())
             .await?;
         assert!(created
-            .name
+            .clone()
+            .name()
             .starts_with("projects/demo-project1/databases/(default)/documents/repositories/"),);
-        assert_eq!(created.fields, {
-            let mut fields = BTreeMap::new();
-            fields.insert(
-                "k1".to_owned(),
-                Value {
-                    value_type: Some(ValueType::StringValue("v1".to_owned())),
-                },
-            );
-            fields
-        });
-        assert!(created.create_time.is_some());
-        assert!(created.update_time.is_some());
+        assert_eq!(created.clone().data(), input);
 
         // READ (GET)
-        let got = client.get(created.name.clone()).await?;
+        let got = client.get(created.clone().name()).await?;
         assert_eq!(got, created);
 
         // READ (LIST)
         let list = client.list(collection_name.to_owned()).await?;
-        assert_eq!(list.documents, vec![got.clone()]);
+        assert_eq!(
+            list.documents
+                .into_iter()
+                .map(Document::new)
+                .collect::<Result<Vec<Document<V>>, document::Error>>()?,
+            vec![got.clone()]
+        );
         assert_eq!(list.next_page_token, "");
 
         // UPDATE
-        let updated = client
+        let updated: Document<V> = client
             .update(
-                got.name.clone(),
+                got.clone().name(),
                 V {
                     k1: "v2".to_owned(), // "v1" -> "v2
                 },
-                got.update_time.context("update_time")?,
+                got.update_time().clone(),
             )
             .await?;
         assert_eq!(
-            updated.fields.get("k1"),
-            Some(&Value {
-                value_type: Some(ValueType::StringValue("v2".to_owned()))
-            })
+            updated.clone().data(),
+            V {
+                k1: "v2".to_string()
+            }
         );
 
         // DELETE
         client
-            .delete(updated.name, updated.update_time.context("update_time")?)
+            .delete(updated.clone().name(), updated.clone().update_time())
             .await?;
 
         Ok(())
