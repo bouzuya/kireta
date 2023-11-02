@@ -2,7 +2,8 @@ use std::collections::BTreeMap;
 
 use google_api_proto::google::firestore::v1::{
     firestore_client::FirestoreClient, precondition::ConditionType, CreateDocumentRequest,
-    DeleteDocumentRequest, Document, GetDocumentRequest, Precondition, Value,
+    DeleteDocumentRequest, Document, GetDocumentRequest, ListDocumentsRequest,
+    ListDocumentsResponse, Precondition, UpdateDocumentRequest, Value,
 };
 use google_authz::{Credentials, GoogleAuthz};
 use prost_types::Timestamp;
@@ -12,10 +13,10 @@ use tonic::{transport::Channel, Request};
 pub enum Error {
     #[error("credentials {0}")]
     Credentials(#[from] google_authz::CredentialsError),
-    #[error("transport {0}")]
-    Transport(#[from] tonic::transport::Error),
     #[error("status {0}")]
     Status(#[from] tonic::Status),
+    #[error("transport {0}")]
+    Transport(#[from] tonic::transport::Error),
 }
 
 pub struct Client {
@@ -25,6 +26,10 @@ pub struct Client {
 }
 
 impl Client {
+    // TODO: begin_transaction
+    // TODO: commit
+    // TODO: rollback
+
     pub async fn new(
         project_id: String,
         database_id: String,
@@ -95,10 +100,48 @@ impl Client {
     ) -> Result<Document, Error> {
         let response = self
             .client
-            .get_document(tonic::Request::new(GetDocumentRequest {
+            .get_document(Request::new(GetDocumentRequest {
                 name,
                 mask: None,
                 consistency_selector: None,
+            }))
+            .await?;
+        Ok(response.into_inner())
+    }
+
+    pub async fn list(
+        &mut self,
+        collection_id: String, // TODO: support some params
+    ) -> Result<ListDocumentsResponse, Error> {
+        let response = self
+            .client
+            .list_documents(Request::new(ListDocumentsRequest {
+                parent: format!(
+                    "projects/{}/databases/{}/documents",
+                    self.project_id, self.database_id
+                ),
+                collection_id,
+                page_size: 100,
+                ..Default::default()
+            }))
+            .await?;
+        Ok(response.into_inner())
+    }
+
+    pub async fn update(
+        &mut self,
+        document: Document,
+        current_update_time: Timestamp,
+    ) -> Result<Document, Error> {
+        let response = self
+            .client
+            .update_document(Request::new(UpdateDocumentRequest {
+                document: Some(document),
+                update_mask: None,
+                mask: None,
+                current_document: Some(Precondition {
+                    condition_type: Some(ConditionType::UpdateTime(current_update_time)),
+                }),
             }))
             .await?;
         Ok(response.into_inner())
@@ -108,10 +151,7 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use anyhow::Context;
-    use google_api_proto::google::firestore::v1::{
-        precondition::ConditionType, value::ValueType, ListDocumentsRequest, Precondition,
-        UpdateDocumentRequest,
-    };
+    use google_api_proto::google::firestore::v1::value::ValueType;
 
     use super::*;
 
@@ -119,40 +159,16 @@ mod tests {
     async fn test() -> anyhow::Result<()> {
         let endpoint = "http://firebase:8080";
         let project_id = "demo-project1";
-        let credentials = google_authz::Credentials::builder()
-            .no_credentials()
-            .build()
-            .await?;
-        let channel = tonic::transport::Channel::from_static(endpoint)
-            .connect()
-            .await?;
-        let channel = google_authz::GoogleAuthz::builder(channel)
-            .credentials(credentials)
-            .build()
-            .await;
-
         let database_id = "(default)";
         let collection_name = "repositories";
 
-        let mut client = FirestoreClient::new(channel);
-        let mut client2 =
+        let mut client =
             Client::new(project_id.to_string(), database_id.to_string(), endpoint).await?;
 
         // reset
-        let response = client
-            .list_documents(tonic::Request::new(ListDocumentsRequest {
-                parent: format!(
-                    "projects/{}/databases/{}/documents",
-                    project_id, database_id
-                ),
-                collection_id: collection_name.to_owned(),
-                page_size: 100,
-                ..Default::default()
-            }))
-            .await?;
-        let list = response.into_inner();
+        let list = client.list(collection_name.to_owned()).await?;
         for doc in list.documents {
-            client2
+            client
                 .delete(doc.name, doc.update_time.context("update_time")?)
                 .await?;
         }
@@ -165,7 +181,7 @@ mod tests {
                 value_type: Some(ValueType::StringValue("v1".to_owned())),
             },
         );
-        let created = client2.create(collection_name.to_string(), fields).await?;
+        let created = client.create(collection_name.to_string(), fields).await?;
         assert!(created
             .name
             .starts_with("projects/demo-project1/databases/(default)/documents/repositories/"),);
@@ -183,29 +199,18 @@ mod tests {
         assert!(created.update_time.is_some());
 
         // READ (GET)
-        let got = client2.get(created.name.clone()).await?;
+        let got = client.get(created.name.clone()).await?;
         assert_eq!(got, created);
 
         // READ (LIST)
-        let response = client
-            .list_documents(tonic::Request::new(ListDocumentsRequest {
-                parent: format!(
-                    "projects/{}/databases/{}/documents",
-                    project_id, database_id
-                ),
-                collection_id: collection_name.to_owned(),
-                page_size: 100,
-                ..Default::default()
-            }))
-            .await?;
-        let list = response.into_inner();
+        let list = client.list(collection_name.to_owned()).await?;
         assert_eq!(list.documents, vec![got.clone()]);
         assert_eq!(list.next_page_token, "");
 
         // UPDATE
-        let response = client
-            .update_document(tonic::Request::new(UpdateDocumentRequest {
-                document: Some(Document {
+        let updated = client
+            .update(
+                Document {
                     fields: {
                         let mut fields = BTreeMap::new();
                         fields.insert(
@@ -217,17 +222,10 @@ mod tests {
                         fields
                     },
                     ..got.clone()
-                }),
-                update_mask: None,
-                mask: None,
-                current_document: Some(Precondition {
-                    condition_type: Some(ConditionType::UpdateTime(
-                        got.update_time.context("update_time")?,
-                    )),
-                }),
-            }))
+                },
+                got.update_time.context("update_time")?,
+            )
             .await?;
-        let updated = response.into_inner();
         assert_eq!(
             updated.fields.get("k1"),
             Some(&Value {
@@ -236,7 +234,7 @@ mod tests {
         );
 
         // DELETE
-        client2
+        client
             .delete(updated.name, updated.update_time.context("update_time")?)
             .await?;
 
