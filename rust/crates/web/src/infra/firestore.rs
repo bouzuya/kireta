@@ -26,6 +26,8 @@ pub enum Error {
     Status(#[from] tonic::Status),
     #[error("transport {0}")]
     Transport(#[from] tonic::transport::Error),
+    #[error("value_type")]
+    ValueType,
 }
 
 pub struct Client {
@@ -83,7 +85,7 @@ impl Client {
                         if let Some(ValueType::MapValue(MapValue { fields })) = ser.value_type {
                             fields
                         } else {
-                            panic!("unexpected value_type: {:?}", ser.value_type);
+                            return Err(Error::ValueType);
                         }
                     },
                     create_time: None,
@@ -132,10 +134,13 @@ impl Client {
         Document::new(response.into_inner()).map_err(Error::Deserialize)
     }
 
-    pub async fn list(
+    pub async fn list<U>(
         &mut self,
         collection_id: String, // TODO: support some params
-    ) -> Result<ListDocumentsResponse, Error> {
+    ) -> Result<(Vec<Document<U>>, String), Error>
+    where
+        U: DeserializeOwned,
+    {
         let response = self
             .client
             .list_documents(Request::new(ListDocumentsRequest {
@@ -148,7 +153,16 @@ impl Client {
                 ..Default::default()
             }))
             .await?;
-        Ok(response.into_inner())
+        let ListDocumentsResponse {
+            documents,
+            next_page_token,
+        } = response.into_inner();
+        documents
+            .into_iter()
+            .map(Document::new)
+            .collect::<Result<Vec<Document<U>>, document::Error>>()
+            .map_err(Error::Deserialize)
+            .map(|documents| (documents, next_page_token))
     }
 
     pub async fn update<T, U>(
@@ -171,7 +185,7 @@ impl Client {
                         if let Some(ValueType::MapValue(MapValue { fields })) = ser.value_type {
                             fields
                         } else {
-                            panic!("unexpected value_type: {:?}", ser.value_type);
+                            return Err(Error::ValueType);
                         }
                     },
                     create_time: None,
@@ -190,8 +204,6 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::Context;
-
     use super::*;
 
     #[tokio::test]
@@ -205,11 +217,9 @@ mod tests {
             Client::new(project_id.to_string(), database_id.to_string(), endpoint).await?;
 
         // reset
-        let list = client.list(collection_name.to_owned()).await?;
-        for doc in list.documents {
-            client
-                .delete(doc.name, doc.update_time.context("update_time")?)
-                .await?;
+        let (documents, _) = client.list::<V>(collection_name.to_owned()).await?;
+        for doc in documents {
+            client.delete(doc.clone().name(), doc.update_time()).await?;
         }
 
         // CREATE
@@ -234,15 +244,9 @@ mod tests {
         assert_eq!(got, created);
 
         // READ (LIST)
-        let list = client.list(collection_name.to_owned()).await?;
-        assert_eq!(
-            list.documents
-                .into_iter()
-                .map(Document::new)
-                .collect::<Result<Vec<Document<V>>, document::Error>>()?,
-            vec![got.clone()]
-        );
-        assert_eq!(list.next_page_token, "");
+        let (documents, next_page_token) = client.list::<V>(collection_name.to_owned()).await?;
+        assert_eq!(documents, vec![got.clone()]);
+        assert_eq!(next_page_token, "");
 
         // UPDATE
         let updated: Document<V> = client
