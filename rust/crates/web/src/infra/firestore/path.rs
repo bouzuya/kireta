@@ -173,6 +173,13 @@ impl RootPath {
         self.database_id.as_str()
     }
 
+    pub fn database_name(&self) -> String {
+        format!(
+            "projects/{}/databases/{}",
+            self.project_id, self.database_id
+        )
+    }
+
     pub fn path(&self) -> String {
         format!(
             "projects/{}/databases/{}/documents",
@@ -348,6 +355,10 @@ mod tests {
             project_id: "demo-project1".to_string(),
         };
         assert_eq!(root_path.database_id(), "(default)");
+        assert_eq!(
+            root_path.database_name(),
+            "projects/demo-project1/databases/(default)"
+        );
         assert_eq!(
             root_path.path(),
             "projects/demo-project1/databases/(default)/documents"
