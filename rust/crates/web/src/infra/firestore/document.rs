@@ -1,7 +1,11 @@
+use std::str::FromStr;
+
 use google_api_proto::google::firestore::v1::{
     value::ValueType, Document as FirestoreDocument, MapValue, Value,
 };
 use prost_types::Timestamp;
+
+use super::path::DocumentPath;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -11,13 +15,15 @@ pub enum Error {
     UpdateTimeIsNone,
     #[error("deserialize")]
     Deserialize(#[from] serde_firestore_value::Error),
+    #[error("invalid name")]
+    InvalidName(#[from] crate::infra::firestore::path::Error),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Document<T> {
     create_time: Timestamp,
     data: T,
-    name: String,
+    name: DocumentPath,
     update_time: Timestamp,
 }
 
@@ -34,6 +40,7 @@ impl<T: serde::de::DeserializeOwned> Document<T> {
         let data: T = serde_firestore_value::from_value(&Value {
             value_type: Some(ValueType::MapValue(MapValue { fields })),
         })?;
+        let name = DocumentPath::from_str(name.as_str())?;
         let update_time = update_time.ok_or(Error::UpdateTimeIsNone)?;
         Ok(Self {
             create_time,
@@ -51,8 +58,8 @@ impl<T: serde::de::DeserializeOwned> Document<T> {
         self.data
     }
 
-    pub fn name(self) -> String {
-        self.name
+    pub fn name(&self) -> &DocumentPath {
+        &self.name
     }
 
     pub fn update_time(self) -> Timestamp {

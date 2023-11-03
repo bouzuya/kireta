@@ -13,7 +13,10 @@ use serde::{de::DeserializeOwned, Serialize};
 use serde_firestore_value::to_value;
 use tonic::{transport::Channel, Request};
 
-use self::document::Document;
+use self::{
+    document::Document,
+    path::{CollectionPath, DocumentPath},
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -63,7 +66,7 @@ impl Client {
 
     pub async fn create<T, U>(
         &mut self,
-        collection_id: String,
+        collection_path: &CollectionPath,
         fields: T,
     ) -> Result<Document<U>, Error>
     where
@@ -73,11 +76,8 @@ impl Client {
         let response = self
             .client
             .create_document(Request::new(CreateDocumentRequest {
-                parent: format!(
-                    "projects/{}/databases/{}/documents",
-                    self.project_id, self.database_id
-                ),
-                collection_id,
+                parent: collection_path.parent().path(),
+                collection_id: collection_path.id().to_string(),
                 document_id: "".to_string(),
                 document: Some(FirestoreDocument {
                     name: "".to_string(),
@@ -100,13 +100,12 @@ impl Client {
 
     pub async fn delete(
         &mut self,
-        // `projects/{project_id}/databases/{database_id}/documents/{document_path}`.
-        name: String,
+        document_path: &DocumentPath,
         current_update_time: Timestamp,
     ) -> Result<(), Error> {
         self.client
             .delete_document(Request::new(DeleteDocumentRequest {
-                name,
+                name: document_path.path(),
                 current_document: Some(Precondition {
                     condition_type: Some(ConditionType::UpdateTime(current_update_time)),
                 }),
@@ -117,8 +116,7 @@ impl Client {
 
     pub async fn get<U>(
         &mut self,
-        // `projects/{project_id}/databases/{database_id}/documents/{document_path}`.
-        name: String,
+        document_path: &DocumentPath,
         // TODO: support transaction
     ) -> Result<Document<U>, Error>
     where
@@ -127,7 +125,7 @@ impl Client {
         let response = self
             .client
             .get_document(Request::new(GetDocumentRequest {
-                name,
+                name: document_path.path(),
                 mask: None,
                 consistency_selector: None,
             }))
@@ -135,9 +133,10 @@ impl Client {
         Document::new(response.into_inner()).map_err(Error::Deserialize)
     }
 
+    // TODO: support some params
     pub async fn list<U>(
         &mut self,
-        collection_id: String, // TODO: support some params
+        collection_path: &CollectionPath,
     ) -> Result<(Vec<Document<U>>, String), Error>
     where
         U: DeserializeOwned,
@@ -145,11 +144,8 @@ impl Client {
         let response = self
             .client
             .list_documents(Request::new(ListDocumentsRequest {
-                parent: format!(
-                    "projects/{}/databases/{}/documents",
-                    self.project_id, self.database_id
-                ),
-                collection_id,
+                parent: collection_path.parent().path(),
+                collection_id: collection_path.id().to_string(),
                 page_size: 100,
                 ..Default::default()
             }))
@@ -168,7 +164,7 @@ impl Client {
 
     pub async fn update<T, U>(
         &mut self,
-        name: String,
+        document_path: &DocumentPath,
         fields: T,
         current_update_time: Timestamp,
     ) -> Result<Document<U>, Error>
@@ -180,7 +176,7 @@ impl Client {
             .client
             .update_document(Request::new(UpdateDocumentRequest {
                 document: Some(FirestoreDocument {
-                    name,
+                    name: document_path.path(),
                     fields: {
                         let ser = to_value(&fields)?;
                         if let Some(ValueType::MapValue(MapValue { fields })) = ser.value_type {
@@ -205,22 +201,29 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
+    use crate::infra::firestore::path::RootPath;
+
     use super::*;
 
     #[tokio::test]
     async fn test() -> anyhow::Result<()> {
         let endpoint = "http://firebase:8080";
-        let project_id = "demo-project1";
-        let database_id = "(default)";
-        let collection_name = "repositories";
+        let root_path = RootPath::new("demo-project1".to_string(), "(default)".to_string())?;
+        let collection_path = root_path.collection("repositories".to_string());
 
-        let mut client =
-            Client::new(project_id.to_string(), database_id.to_string(), endpoint).await?;
+        let mut client = Client::new(
+            collection_path.root().project_id().to_string(),
+            collection_path.root().database_id().to_string(),
+            endpoint,
+        )
+        .await?;
 
         // reset
-        let (documents, _) = client.list::<V>(collection_name.to_owned()).await?;
+        let (documents, _) = client.list::<V>(&collection_path).await?;
         for doc in documents {
-            client.delete(doc.clone().name(), doc.update_time()).await?;
+            // TODO: Document::update_time
+            let current_update_time = doc.clone().update_time();
+            client.delete(doc.name(), current_update_time).await?;
         }
 
         // CREATE
@@ -231,32 +234,32 @@ mod tests {
         let input = V {
             k1: "v1".to_string(),
         };
-        let created = client
-            .create(collection_name.to_string(), input.clone())
-            .await?;
+        let created = client.create(&collection_path, input.clone()).await?;
         assert!(created
-            .clone()
             .name()
+            .path()
             .starts_with("projects/demo-project1/databases/(default)/documents/repositories/"),);
         assert_eq!(created.clone().data(), input);
 
         // READ (GET)
-        let got = client.get(created.clone().name()).await?;
+        let got = client.get(created.name()).await?;
         assert_eq!(got, created);
 
         // READ (LIST)
-        let (documents, next_page_token) = client.list::<V>(collection_name.to_owned()).await?;
+        let (documents, next_page_token) = client.list::<V>(&collection_path).await?;
         assert_eq!(documents, vec![got.clone()]);
         assert_eq!(next_page_token, "");
 
         // UPDATE
+        // TODO: Document::update_time
+        let current_update_time = got.clone().update_time();
         let updated: Document<V> = client
             .update(
-                got.clone().name(),
+                got.name(),
                 V {
                     k1: "v2".to_owned(), // "v1" -> "v2
                 },
-                got.update_time().clone(),
+                current_update_time,
             )
             .await?;
         assert_eq!(
@@ -268,7 +271,7 @@ mod tests {
 
         // DELETE
         client
-            .delete(updated.clone().name(), updated.clone().update_time())
+            .delete(updated.name(), updated.clone().update_time())
             .await?;
 
         Ok(())
