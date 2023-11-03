@@ -1,5 +1,6 @@
 mod document;
 mod path;
+mod timestamp;
 
 use google_api_proto::google::firestore::v1::{
     firestore_client::FirestoreClient, precondition::ConditionType, value::ValueType,
@@ -8,7 +9,6 @@ use google_api_proto::google::firestore::v1::{
     UpdateDocumentRequest,
 };
 use google_authz::{Credentials, GoogleAuthz};
-use prost_types::Timestamp;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_firestore_value::to_value;
 use tonic::{transport::Channel, Request};
@@ -16,6 +16,7 @@ use tonic::{transport::Channel, Request};
 use self::{
     document::Document,
     path::{CollectionPath, DocumentPath},
+    timestamp::Timestamp,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -107,7 +108,9 @@ impl Client {
             .delete_document(Request::new(DeleteDocumentRequest {
                 name: document_path.path(),
                 current_document: Some(Precondition {
-                    condition_type: Some(ConditionType::UpdateTime(current_update_time)),
+                    condition_type: Some(ConditionType::UpdateTime(prost_types::Timestamp::from(
+                        current_update_time,
+                    ))),
                 }),
             }))
             .await?;
@@ -191,7 +194,9 @@ impl Client {
                 update_mask: None,
                 mask: None,
                 current_document: Some(Precondition {
-                    condition_type: Some(ConditionType::UpdateTime(current_update_time)),
+                    condition_type: Some(ConditionType::UpdateTime(prost_types::Timestamp::from(
+                        current_update_time,
+                    ))),
                 }),
             }))
             .await?;
@@ -221,9 +226,7 @@ mod tests {
         // reset
         let (documents, _) = client.list::<V>(&collection_path).await?;
         for doc in documents {
-            // TODO: Document::update_time
-            let current_update_time = doc.clone().update_time();
-            client.delete(doc.name(), current_update_time).await?;
+            client.delete(doc.name(), doc.update_time()).await?;
         }
 
         // CREATE
@@ -251,15 +254,13 @@ mod tests {
         assert_eq!(next_page_token, "");
 
         // UPDATE
-        // TODO: Document::update_time
-        let current_update_time = got.clone().update_time();
         let updated: Document<V> = client
             .update(
                 got.name(),
                 V {
                     k1: "v2".to_owned(), // "v1" -> "v2
                 },
-                current_update_time,
+                got.update_time(),
             )
             .await?;
         assert_eq!(
@@ -270,9 +271,7 @@ mod tests {
         );
 
         // DELETE
-        client
-            .delete(updated.name(), updated.clone().update_time())
-            .await?;
+        client.delete(updated.name(), updated.update_time()).await?;
 
         Ok(())
     }
