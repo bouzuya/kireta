@@ -1,4 +1,5 @@
 mod document;
+mod path;
 
 use google_api_proto::google::firestore::v1::{
     firestore_client::FirestoreClient, precondition::ConditionType, value::ValueType,
