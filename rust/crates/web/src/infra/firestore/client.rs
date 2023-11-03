@@ -13,7 +13,7 @@ use crate::infra::firestore::document;
 
 use super::{
     document::Document,
-    path::{CollectionPath, DocumentPath},
+    path::{self, CollectionPath, DocumentPath, RootPath},
     timestamp::Timestamp,
 };
 
@@ -23,6 +23,8 @@ pub enum Error {
     Credentials(#[from] google_authz::CredentialsError),
     #[error("deserialize {0}")]
     Deserialize(#[from] document::Error),
+    #[error("path {0}")]
+    Path(#[from] path::Error),
     #[error("serialize {0}")]
     Serialize(#[from] serde_firestore_value::Error),
     #[error("status {0}")]
@@ -35,6 +37,7 @@ pub enum Error {
 
 pub struct Client {
     client: FirestoreClient<GoogleAuthz<Channel>>,
+    root_path: RootPath,
 }
 
 impl Client {
@@ -43,7 +46,11 @@ impl Client {
     // TODO: rollback
     // TODO: run_query
 
-    pub async fn new(endpoint: &'static str) -> Result<Self, Error> {
+    pub async fn new(
+        project_id: String,
+        database_id: String,
+        endpoint: &'static str,
+    ) -> Result<Self, Error> {
         let credentials = Credentials::builder().no_credentials().build().await?;
         let channel = Channel::from_static(endpoint).connect().await?;
         let channel = GoogleAuthz::builder(channel)
@@ -51,7 +58,12 @@ impl Client {
             .build()
             .await;
         let client = FirestoreClient::new(channel);
-        Ok(Self { client })
+        let root_path = RootPath::new(project_id, database_id)?;
+        Ok(Self { client, root_path })
+    }
+
+    pub fn collection(&self, collection_id: String) -> CollectionPath {
+        self.root_path.clone().collection(collection_id)
     }
 
     pub async fn create<T, U>(

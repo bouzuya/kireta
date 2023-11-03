@@ -5,15 +5,23 @@ pub mod timestamp;
 
 #[cfg(test)]
 mod tests {
-    use crate::infra::firestore::{client::Client, document::Document, path::RootPath};
+    use crate::infra::firestore::{client::Client, document::Document};
 
     #[tokio::test]
     async fn test() -> anyhow::Result<()> {
         let endpoint = "http://firebase:8080";
-        let root_path = RootPath::new("demo-project1".to_string(), "(default)".to_string())?;
-        let collection_path = root_path.collection("repositories".to_string());
+        let mut client = Client::new(
+            "demo-project1".to_string(),
+            "(default)".to_string(),
+            endpoint,
+        )
+        .await?;
+        let collection_path = client.collection("repositories".to_string());
 
-        let mut client = Client::new(endpoint).await?;
+        assert_eq!(
+            collection_path.path(),
+            "projects/demo-project1/databases/(default)/documents/repositories"
+        );
 
         // reset
         let (documents, _) = client.list::<V>(&collection_path).await?;
