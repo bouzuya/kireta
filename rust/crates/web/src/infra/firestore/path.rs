@@ -1,3 +1,15 @@
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("invalid root path")]
+    InvalidRootPath,
+    #[error("not collection path")]
+    InvalidCollectionPath,
+    #[error("not document path")]
+    InvalidDocumentPath,
+    #[error("too long")]
+    TooLong,
+}
+
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Path {
     Collection(CollectionPath),
@@ -42,38 +54,10 @@ impl From<RootPath> for Path {
 }
 
 impl std::str::FromStr for Path {
-    type Err = anyhow::Error;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() > 1_024 * 6 {
-            anyhow::bail!("too long");
-        }
-
-        let parts = s.split('/').collect::<Vec<&str>>();
-        if parts.len() < 5
-            || parts[0] != "projects"
-            || parts[2] != "databases"
-            || parts[4] != "documents"
-        {
-            anyhow::bail!("invalid root path");
-        }
-
-        // TODO: check Maximum depth of subcollections (<= 100)
-
-        // TODO: check `"."` and `".."` and `"__.*__"`
-        // TODO: check len (<= 1500)
-        let mut path = Path::from(RootPath {
-            database_id: parts[3].to_string(),
-            project_id: parts[1].to_string(),
-        });
-        for s in parts.into_iter().skip(5).map(|s| s.to_string()) {
-            path = match path {
-                Path::Collection(p) => Path::from(p.doc(s)),
-                Path::Document(p) => Path::from(p.collection(s)),
-                Path::Root(p) => Path::from(p.collection(s)),
-            };
-        }
-        Ok(path)
+        from_str(s)
     }
 }
 
@@ -108,6 +92,18 @@ impl CollectionPath {
     }
 }
 
+impl std::str::FromStr for CollectionPath {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Path::Collection(p) = from_str(s)? {
+            Ok(p)
+        } else {
+            Err(Error::InvalidCollectionPath)
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct DocumentPath {
     id: String,
@@ -139,6 +135,18 @@ impl DocumentPath {
     }
 }
 
+impl std::str::FromStr for DocumentPath {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Path::Document(p) = from_str(s)? {
+            Ok(p)
+        } else {
+            Err(Error::InvalidDocumentPath)
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct RootPath {
     database_id: String,
@@ -167,6 +175,50 @@ impl RootPath {
     pub fn project_id(&self) -> &str {
         self.project_id.as_str()
     }
+}
+
+impl std::str::FromStr for RootPath {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Path::Root(p) = from_str(s)? {
+            Ok(p)
+        } else {
+            Err(Error::InvalidRootPath)
+        }
+    }
+}
+
+fn from_str(s: &str) -> Result<Path, Error> {
+    if s.len() > 1_024 * 6 {
+        return Err(Error::TooLong);
+    }
+
+    let parts = s.split('/').collect::<Vec<&str>>();
+    if parts.len() < 5
+        || parts[0] != "projects"
+        || parts[2] != "databases"
+        || parts[4] != "documents"
+    {
+        return Err(Error::InvalidRootPath);
+    }
+
+    // TODO: check Maximum depth of subcollections (<= 100)
+
+    // TODO: check `"."` and `".."` and `"__.*__"`
+    // TODO: check len (<= 1500)
+    let mut path = Path::from(RootPath {
+        database_id: parts[3].to_string(),
+        project_id: parts[1].to_string(),
+    });
+    for s in parts.into_iter().skip(5).map(|s| s.to_string()) {
+        path = match path {
+            Path::Collection(p) => Path::from(p.doc(s)),
+            Path::Document(p) => Path::from(p.collection(s)),
+            Path::Root(p) => Path::from(p.collection(s)),
+        };
+    }
+    Ok(path)
 }
 
 #[cfg(test)]
