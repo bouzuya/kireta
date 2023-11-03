@@ -154,6 +154,14 @@ pub struct RootPath {
 }
 
 impl RootPath {
+    pub fn new(project_id: String, database_id: String) -> Result<Self, Error> {
+        // TODO: check project_id and database_id format
+        Ok(Self {
+            database_id,
+            project_id,
+        })
+    }
+
     pub fn collection(self, collection_id: String) -> CollectionPath {
         CollectionPath {
             id: collection_id,
