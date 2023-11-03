@@ -37,8 +37,6 @@ pub enum Error {
 
 pub struct Client {
     client: FirestoreClient<GoogleAuthz<Channel>>,
-    database_id: String,
-    project_id: String,
 }
 
 impl Client {
@@ -46,11 +44,7 @@ impl Client {
     // TODO: commit
     // TODO: rollback
 
-    pub async fn new(
-        project_id: String,
-        database_id: String,
-        endpoint: &'static str,
-    ) -> Result<Self, Error> {
+    pub async fn new(endpoint: &'static str) -> Result<Self, Error> {
         let credentials = Credentials::builder().no_credentials().build().await?;
         let channel = Channel::from_static(endpoint).connect().await?;
         let channel = GoogleAuthz::builder(channel)
@@ -58,11 +52,7 @@ impl Client {
             .build()
             .await;
         let client = FirestoreClient::new(channel);
-        Ok(Self {
-            client,
-            database_id,
-            project_id,
-        })
+        Ok(Self { client })
     }
 
     pub async fn create<T, U>(
@@ -216,12 +206,7 @@ mod tests {
         let root_path = RootPath::new("demo-project1".to_string(), "(default)".to_string())?;
         let collection_path = root_path.collection("repositories".to_string());
 
-        let mut client = Client::new(
-            collection_path.root().project_id().to_string(),
-            collection_path.root().database_id().to_string(),
-            endpoint,
-        )
-        .await?;
+        let mut client = Client::new(endpoint).await?;
 
         // reset
         let (documents, _) = client.list::<V>(&collection_path).await?;
