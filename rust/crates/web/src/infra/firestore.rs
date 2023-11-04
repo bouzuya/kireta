@@ -37,11 +37,12 @@ mod tests {
         let input = V {
             k1: "v1".to_string(),
         };
-        let created = client.create(&collection_path, input.clone()).await?;
-        assert!(created
-            .name()
-            .path()
-            .starts_with("projects/demo-project1/databases/(default)/documents/repositories/"),);
+        let document_path = collection_path.clone().doc("1".to_string());
+        let created = client.create(&document_path, input.clone()).await?;
+        assert_eq!(
+            created.name().path(),
+            "projects/demo-project1/databases/(default)/documents/repositories/1"
+        );
         assert_eq!(created.clone().data(), input);
 
         // READ (GET)

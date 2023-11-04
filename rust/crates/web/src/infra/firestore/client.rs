@@ -99,7 +99,7 @@ impl Client {
 
     pub async fn create<T, U>(
         &mut self,
-        collection_path: &CollectionPath,
+        document_path: &DocumentPath,
         fields: T,
     ) -> Result<Document<U>, Error>
     where
@@ -109,9 +109,9 @@ impl Client {
         let response = self
             .client
             .create_document(CreateDocumentRequest {
-                parent: collection_path.parent().path(),
-                collection_id: collection_path.id().to_string(),
-                document_id: "".to_string(),
+                parent: document_path.parent().parent().path(),
+                collection_id: document_path.parent().id().to_string(),
+                document_id: document_path.id().to_string(),
                 document: Some(FirestoreDocument {
                     name: "".to_string(),
                     fields: {
