@@ -1,12 +1,9 @@
 use google_api_proto::google::firestore::v1::{
-    firestore_client::FirestoreClient,
-    precondition::ConditionType,
-    value::ValueType,
-    write::{self, Operation},
-    BeginTransactionRequest, BeginTransactionResponse, CommitRequest, CommitResponse,
-    CreateDocumentRequest, DeleteDocumentRequest, Document as FirestoreDocument,
-    GetDocumentRequest, ListDocumentsRequest, ListDocumentsResponse, MapValue, Precondition,
-    RollbackRequest, UpdateDocumentRequest, Write,
+    firestore_client::FirestoreClient, get_document_request::ConsistencySelector,
+    precondition::ConditionType, value::ValueType, write::Operation, BeginTransactionRequest,
+    BeginTransactionResponse, CommitRequest, CommitResponse, CreateDocumentRequest,
+    DeleteDocumentRequest, GetDocumentRequest, ListDocumentsRequest, ListDocumentsResponse,
+    MapValue, Precondition, RollbackRequest, UpdateDocumentRequest, Write,
 };
 use google_authz::{Credentials, GoogleAuthz};
 use serde::{de::DeserializeOwned, Serialize};
@@ -48,19 +45,21 @@ impl Transaction {
         T: Serialize,
     {
         self.writes.push(Write {
-            operation: Some(Operation::Update(FirestoreDocument {
-                name: document_path.path(),
-                fields: {
-                    let ser = to_value(&fields)?;
-                    if let Some(ValueType::MapValue(MapValue { fields })) = ser.value_type {
-                        fields
-                    } else {
-                        return Err(Error::ValueType);
-                    }
+            operation: Some(Operation::Update(
+                google_api_proto::google::firestore::v1::Document {
+                    name: document_path.path(),
+                    fields: {
+                        let ser = to_value(&fields)?;
+                        if let Some(ValueType::MapValue(MapValue { fields })) = ser.value_type {
+                            fields
+                        } else {
+                            return Err(Error::ValueType);
+                        }
+                    },
+                    create_time: None,
+                    update_time: None,
                 },
-                create_time: None,
-                update_time: None,
-            })),
+            )),
             update_mask: None,
             update_transforms: vec![],
             current_document: Some(Precondition {
@@ -86,6 +85,24 @@ impl Transaction {
             }),
         });
         Ok(())
+    }
+
+    pub async fn get<U>(&mut self, document_path: &DocumentPath) -> Result<Document<U>, Error>
+    where
+        U: DeserializeOwned,
+    {
+        let response = self
+            .client
+            .client
+            .get_document(GetDocumentRequest {
+                name: document_path.path(),
+                mask: None,
+                consistency_selector: Some(ConsistencySelector::Transaction(
+                    self.transaction.clone(),
+                )),
+            })
+            .await?;
+        Document::new(response.into_inner()).map_err(Error::Deserialize)
     }
 
     pub async fn rollback(mut self) -> Result<(), Error> {
@@ -178,7 +195,7 @@ impl Client {
                 parent: document_path.parent().parent().path(),
                 collection_id: document_path.parent().id().to_string(),
                 document_id: document_path.id().to_string(),
-                document: Some(FirestoreDocument {
+                document: Some(google_api_proto::google::firestore::v1::Document {
                     name: "".to_string(),
                     fields: {
                         let ser = to_value(&fields)?;
@@ -215,11 +232,7 @@ impl Client {
         Ok(())
     }
 
-    pub async fn get<U>(
-        &mut self,
-        document_path: &DocumentPath,
-        // TODO: support transaction
-    ) -> Result<Document<U>, Error>
+    pub async fn get<U>(&mut self, document_path: &DocumentPath) -> Result<Document<U>, Error>
     where
         U: DeserializeOwned,
     {
@@ -276,7 +289,7 @@ impl Client {
         let response = self
             .client
             .update_document(UpdateDocumentRequest {
-                document: Some(FirestoreDocument {
+                document: Some(google_api_proto::google::firestore::v1::Document {
                     name: document_path.path(),
                     fields: {
                         let ser = to_value(&fields)?;

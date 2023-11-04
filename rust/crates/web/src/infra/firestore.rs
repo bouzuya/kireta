@@ -5,7 +5,7 @@ pub mod timestamp;
 
 #[cfg(test)]
 mod tests {
-    use crate::infra::firestore::{client::Client, document::Document};
+    use crate::infra::firestore::{client::Client, document::Document, path::DocumentPath};
 
     #[tokio::test]
     async fn test() -> anyhow::Result<()> {
@@ -107,21 +107,24 @@ mod tests {
         let mut transaction = client.begin_transaction().await?;
         transaction.create(&document_path, input)?;
         transaction.commit().await?;
+        assert!(client.get::<V>(&document_path).await.is_ok());
+
+        async fn f(client: &mut Client, document_path: &DocumentPath) -> anyhow::Result<()> {
+            let mut transaction = client.begin_transaction().await?;
+            let got = transaction.get::<V>(document_path).await?;
+            transaction.delete(document_path, got.update_time())?;
+            transaction.rollback().await?;
+            Ok(())
+        }
+        f(&mut client, &document_path).await?;
+        // Not deleted because it was rolled back
+        assert!(client.get::<V>(&document_path).await.is_ok());
 
         let got = client.get::<V>(&document_path).await?;
         let current_update_time = got.update_time();
-
-        let mut transaction = client.begin_transaction().await?;
-        transaction.delete(&document_path, current_update_time)?;
-        transaction.rollback().await?;
-
-        let got = client.get::<V>(&document_path).await?;
-        let current_update_time = got.update_time();
-
         let mut transaction = client.begin_transaction().await?;
         transaction.delete(&document_path, current_update_time)?;
         transaction.commit().await?;
-
         let err = client.get::<V>(&document_path).await.unwrap_err();
         if let crate::infra::firestore::client::Error::Status(status) = err {
             assert_eq!(status.code(), tonic::Code::NotFound);
