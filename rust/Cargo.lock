@@ -2105,6 +2105,7 @@ dependencies = [
  "google-api-proto",
  "google-authz",
  "hyper",
+ "prost",
  "prost-types",
  "serde",
  "serde-firestore-value",

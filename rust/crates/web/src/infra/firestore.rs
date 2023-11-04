@@ -75,4 +75,21 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_transaction() -> anyhow::Result<()> {
+        let endpoint = "http://firebase:8080";
+        let mut client = Client::new(
+            "demo-project1".to_string(),
+            "(default)".to_string(),
+            endpoint,
+        )
+        .await?;
+        // let collection_path = client.collection("repositories".to_string());
+
+        let transaction = client.begin_transaction().await?;
+        client.commit(transaction, vec![]).await?;
+
+        Ok(())
+    }
 }
