@@ -86,10 +86,48 @@ mod tests {
             endpoint,
         )
         .await?;
-        // let collection_path = client.collection("repositories".to_string());
+        let collection_path = client.collection("transactions".to_string());
 
-        let transaction = client.begin_transaction().await?;
-        client.commit(transaction, vec![]).await?;
+        // reset
+        let (documents, _) = client.list::<V>(&collection_path).await?;
+        for doc in documents {
+            client.delete(doc.name(), doc.update_time()).await?;
+        }
+
+        let document_path = collection_path.doc("1".to_string());
+
+        #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+        struct V {
+            k1: String,
+        }
+
+        let input = V {
+            k1: "v1".to_string(),
+        };
+        let mut transaction = client.begin_transaction().await?;
+        transaction.create(&document_path, input)?;
+        client.commit(transaction).await?;
+
+        let got = client.get::<V>(&document_path).await?;
+        let current_update_time = got.update_time();
+
+        let mut transaction = client.begin_transaction().await?;
+        transaction.delete(&document_path, current_update_time)?;
+        client.rollback(transaction).await?;
+
+        let got = client.get::<V>(&document_path).await?;
+        let current_update_time = got.update_time();
+
+        let mut transaction = client.begin_transaction().await?;
+        transaction.delete(&document_path, current_update_time)?;
+        client.commit(transaction).await?;
+
+        let err = client.get::<V>(&document_path).await.unwrap_err();
+        if let crate::infra::firestore::client::Error::Status(status) = err {
+            assert_eq!(status.code(), tonic::Code::NotFound);
+        } else {
+            panic!("unexpected error: {:?}", err);
+        }
 
         Ok(())
     }

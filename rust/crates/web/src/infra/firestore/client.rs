@@ -1,9 +1,12 @@
 use google_api_proto::google::firestore::v1::{
-    firestore_client::FirestoreClient, precondition::ConditionType, value::ValueType,
+    firestore_client::FirestoreClient,
+    precondition::ConditionType,
+    value::ValueType,
+    write::{self, Operation},
     BeginTransactionRequest, BeginTransactionResponse, CommitRequest, CommitResponse,
     CreateDocumentRequest, DeleteDocumentRequest, Document as FirestoreDocument,
     GetDocumentRequest, ListDocumentsRequest, ListDocumentsResponse, MapValue, Precondition,
-    UpdateDocumentRequest, Write,
+    RollbackRequest, UpdateDocumentRequest, Write,
 };
 use google_authz::{Credentials, GoogleAuthz};
 use serde::{de::DeserializeOwned, Serialize};
@@ -18,7 +21,57 @@ use super::{
     timestamp::Timestamp,
 };
 
-pub struct Transaction(prost::bytes::Bytes);
+pub struct Transaction {
+    transaction: prost::bytes::Bytes,
+    writes: Vec<Write>,
+}
+
+impl Transaction {
+    pub fn create<T>(&mut self, document_path: &DocumentPath, fields: T) -> Result<(), Error>
+    where
+        T: Serialize,
+    {
+        self.writes.push(Write {
+            operation: Some(Operation::Update(FirestoreDocument {
+                name: document_path.path(),
+                fields: {
+                    let ser = to_value(&fields)?;
+                    if let Some(ValueType::MapValue(MapValue { fields })) = ser.value_type {
+                        fields
+                    } else {
+                        return Err(Error::ValueType);
+                    }
+                },
+                create_time: None,
+                update_time: None,
+            })),
+            update_mask: None,
+            update_transforms: vec![],
+            current_document: Some(Precondition {
+                condition_type: Some(ConditionType::Exists(false)),
+            }),
+        });
+        Ok(())
+    }
+
+    pub fn delete(
+        &mut self,
+        document_path: &DocumentPath,
+        current_update_time: Timestamp,
+    ) -> Result<(), Error> {
+        self.writes.push(Write {
+            operation: Some(Operation::Delete(document_path.path())),
+            update_mask: None,
+            update_transforms: vec![],
+            current_document: Some(Precondition {
+                condition_type: Some(ConditionType::UpdateTime(prost_types::Timestamp::from(
+                    current_update_time,
+                ))),
+            }),
+        });
+        Ok(())
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -72,7 +125,10 @@ impl Client {
             })
             .await?;
         let BeginTransactionResponse { transaction } = response.into_inner();
-        Ok(Transaction(transaction))
+        Ok(Transaction {
+            transaction,
+            writes: vec![],
+        })
     }
 
     pub fn collection(&self, collection_id: String) -> CollectionPath {
@@ -82,14 +138,13 @@ impl Client {
     pub async fn commit(
         &mut self,
         transaction: Transaction,
-        writes: Vec<Write>,
     ) -> Result<((), Option<Timestamp>), Error> {
         let response = self
             .client
             .commit(CommitRequest {
                 database: self.root_path.database_name(),
-                writes,
-                transaction: transaction.0,
+                writes: transaction.writes,
+                transaction: transaction.transaction,
             })
             .await?;
         // TODO: write_results
@@ -195,6 +250,16 @@ impl Client {
             .collect::<Result<Vec<Document<U>>, document::Error>>()
             .map_err(Error::Deserialize)
             .map(|documents| (documents, next_page_token))
+    }
+
+    pub async fn rollback(&mut self, transaction: Transaction) -> Result<(), Error> {
+        self.client
+            .rollback(RollbackRequest {
+                database: self.root_path.database_name(),
+                transaction: transaction.transaction,
+            })
+            .await?;
+        Ok(())
     }
 
     pub async fn update<T, U>(
