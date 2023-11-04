@@ -106,21 +106,21 @@ mod tests {
         };
         let mut transaction = client.begin_transaction().await?;
         transaction.create(&document_path, input)?;
-        client.commit(transaction).await?;
+        transaction.commit().await?;
 
         let got = client.get::<V>(&document_path).await?;
         let current_update_time = got.update_time();
 
         let mut transaction = client.begin_transaction().await?;
         transaction.delete(&document_path, current_update_time)?;
-        client.rollback(transaction).await?;
+        transaction.rollback().await?;
 
         let got = client.get::<V>(&document_path).await?;
         let current_update_time = got.update_time();
 
         let mut transaction = client.begin_transaction().await?;
         transaction.delete(&document_path, current_update_time)?;
-        client.commit(transaction).await?;
+        transaction.commit().await?;
 
         let err = client.get::<V>(&document_path).await.unwrap_err();
         if let crate::infra::firestore::client::Error::Status(status) = err {

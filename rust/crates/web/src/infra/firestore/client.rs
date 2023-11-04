@@ -22,11 +22,27 @@ use super::{
 };
 
 pub struct Transaction {
+    client: Client,
     transaction: prost::bytes::Bytes,
     writes: Vec<Write>,
 }
 
 impl Transaction {
+    pub async fn commit(mut self) -> Result<((), Option<Timestamp>), Error> {
+        let response = self
+            .client
+            .client
+            .commit(CommitRequest {
+                database: self.client.root_path.database_name(),
+                writes: self.writes,
+                transaction: self.transaction,
+            })
+            .await?;
+        // TODO: write_results
+        let CommitResponse { commit_time, .. } = response.into_inner();
+        Ok(((), commit_time.map(Timestamp::from)))
+    }
+
     pub fn create<T>(&mut self, document_path: &DocumentPath, fields: T) -> Result<(), Error>
     where
         T: Serialize,
@@ -71,6 +87,17 @@ impl Transaction {
         });
         Ok(())
     }
+
+    pub async fn rollback(mut self) -> Result<(), Error> {
+        self.client
+            .client
+            .rollback(RollbackRequest {
+                database: self.client.root_path.database_name(),
+                transaction: self.transaction,
+            })
+            .await?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -91,13 +118,13 @@ pub enum Error {
     ValueType,
 }
 
+#[derive(Clone)]
 pub struct Client {
     client: FirestoreClient<GoogleAuthz<Channel>>,
     root_path: RootPath,
 }
 
 impl Client {
-    // TODO: rollback
     // TODO: run_query
 
     pub async fn new(
@@ -126,6 +153,7 @@ impl Client {
             .await?;
         let BeginTransactionResponse { transaction } = response.into_inner();
         Ok(Transaction {
+            client: self.clone(),
             transaction,
             writes: vec![],
         })
@@ -133,23 +161,6 @@ impl Client {
 
     pub fn collection(&self, collection_id: String) -> CollectionPath {
         self.root_path.clone().collection(collection_id)
-    }
-
-    pub async fn commit(
-        &mut self,
-        transaction: Transaction,
-    ) -> Result<((), Option<Timestamp>), Error> {
-        let response = self
-            .client
-            .commit(CommitRequest {
-                database: self.root_path.database_name(),
-                writes: transaction.writes,
-                transaction: transaction.transaction,
-            })
-            .await?;
-        // TODO: write_results
-        let CommitResponse { commit_time, .. } = response.into_inner();
-        Ok(((), commit_time.map(Timestamp::from)))
     }
 
     pub async fn create<T, U>(
@@ -250,16 +261,6 @@ impl Client {
             .collect::<Result<Vec<Document<U>>, document::Error>>()
             .map_err(Error::Deserialize)
             .map(|documents| (documents, next_page_token))
-    }
-
-    pub async fn rollback(&mut self, transaction: Transaction) -> Result<(), Error> {
-        self.client
-            .rollback(RollbackRequest {
-                database: self.root_path.database_name(),
-                transaction: transaction.transaction,
-            })
-            .await?;
-        Ok(())
     }
 
     pub async fn update<T, U>(
