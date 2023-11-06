@@ -27,21 +27,6 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    pub async fn commit(mut self) -> Result<((), Option<Timestamp>), Error> {
-        let response = self
-            .client
-            .client
-            .commit(CommitRequest {
-                database: self.client.root_path.database_name(),
-                writes: self.writes,
-                transaction: self.transaction,
-            })
-            .await?;
-        // TODO: write_results
-        let CommitResponse { commit_time, .. } = response.into_inner();
-        Ok(((), commit_time.map(Timestamp::from)))
-    }
-
     pub fn create<T>(&mut self, document_path: &DocumentPath, fields: T) -> Result<(), Error>
     where
         T: Serialize,
@@ -105,17 +90,6 @@ impl Transaction {
             })
             .await?;
         Document::new(response.into_inner()).map_err(Error::Deserialize)
-    }
-
-    pub async fn rollback(mut self) -> Result<(), Error> {
-        self.client
-            .client
-            .rollback(RollbackRequest {
-                database: self.client.root_path.database_name(),
-                transaction: self.transaction,
-            })
-            .await?;
-        Ok(())
     }
 }
 
@@ -297,11 +271,26 @@ impl Client {
         };
         match f(&mut transaction).await {
             Ok(()) => {
-                transaction.commit().await?;
+                let response = self
+                    .client
+                    .commit(CommitRequest {
+                        database: self.root_path.database_name(),
+                        writes: transaction.writes,
+                        transaction: transaction.transaction,
+                    })
+                    .await?;
+                // TODO: commit_time and write_results
+                let CommitResponse { .. } = response.into_inner();
                 Ok(())
             }
             Err(e) => {
-                transaction.rollback().await?;
+                // TODO: error handling
+                self.client
+                    .rollback(RollbackRequest {
+                        database: self.root_path.database_name(),
+                        transaction: transaction.transaction,
+                    })
+                    .await?;
                 Err(e)
             }
         }
