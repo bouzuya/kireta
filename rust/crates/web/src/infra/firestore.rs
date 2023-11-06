@@ -5,7 +5,11 @@ pub mod timestamp;
 
 #[cfg(test)]
 mod tests {
-    use crate::infra::firestore::{client::Client, document::Document, path::DocumentPath};
+    use crate::infra::firestore::{
+        client::{Client, Transaction},
+        document::Document,
+        path::DocumentPath,
+    };
 
     #[tokio::test]
     async fn test() -> anyhow::Result<()> {
@@ -131,6 +135,70 @@ mod tests {
         } else {
             panic!("unexpected error: {:?}", err);
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_run_transaction() -> anyhow::Result<()> {
+        let endpoint = "http://firebase:8080";
+        let mut client = Client::new(
+            "demo-project1".to_string(),
+            "(default)".to_string(),
+            endpoint,
+        )
+        .await?;
+        let collection_path = client.collection("transactions".to_string());
+
+        // reset
+        let (documents, _) = client.list::<V>(&collection_path).await?;
+        for doc in documents {
+            client.delete(doc.name(), doc.update_time()).await?;
+        }
+
+        let document_path = collection_path.doc("1".to_string());
+
+        #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+        struct V {
+            k1: String,
+        }
+
+        client
+            .run_transaction(|transaction: &mut Transaction| {
+                let p = document_path.clone();
+                Box::pin(async move {
+                    let input = V {
+                        k1: "v1".to_string(),
+                    };
+                    transaction.create(&p, input)?;
+                    Ok(())
+                })
+            })
+            .await?;
+        assert!(client.get::<V>(&document_path).await.is_ok());
+
+        // async fn f(client: &mut Client, document_path: &DocumentPath) -> anyhow::Result<()> {
+        //     let mut transaction = client.begin_transaction().await?;
+        //     let got = transaction.get::<V>(document_path).await?;
+        //     transaction.delete(document_path, got.update_time())?;
+        //     transaction.rollback().await?;
+        //     Ok(())
+        // }
+        // f(&mut client, &document_path).await?;
+        // // Not deleted because it was rolled back
+        // assert!(client.get::<V>(&document_path).await.is_ok());
+
+        // let got = client.get::<V>(&document_path).await?;
+        // let current_update_time = got.update_time();
+        // let mut transaction = client.begin_transaction().await?;
+        // transaction.delete(&document_path, current_update_time)?;
+        // transaction.commit().await?;
+        // let err = client.get::<V>(&document_path).await.unwrap_err();
+        // if let crate::infra::firestore::client::Error::Status(status) = err {
+        //     assert_eq!(status.code(), tonic::Code::NotFound);
+        // } else {
+        //     panic!("unexpected error: {:?}", err);
+        // }
 
         Ok(())
     }

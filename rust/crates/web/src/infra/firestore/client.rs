@@ -1,3 +1,5 @@
+use std::{future::Future, pin::Pin};
+
 use google_api_proto::google::firestore::v1::{
     firestore_client::FirestoreClient, get_document_request::ConsistencySelector,
     precondition::ConditionType, value::ValueType, write::Operation, BeginTransactionRequest,
@@ -274,6 +276,35 @@ impl Client {
             .collect::<Result<Vec<Document<U>>, document::Error>>()
             .map_err(Error::Deserialize)
             .map(|documents| (documents, next_page_token))
+    }
+
+    pub async fn run_transaction<F>(&mut self, f: F) -> Result<(), Error>
+    where
+        F: FnOnce(&mut Transaction) -> Pin<Box<dyn Future<Output = Result<(), Error>> + '_>>,
+    {
+        let response = self
+            .client
+            .begin_transaction(BeginTransactionRequest {
+                database: self.root_path.database_name(),
+                options: None,
+            })
+            .await?;
+        let BeginTransactionResponse { transaction } = response.into_inner();
+        let mut transaction = Transaction {
+            client: self.clone(),
+            transaction,
+            writes: vec![],
+        };
+        match f(&mut transaction).await {
+            Ok(()) => {
+                transaction.commit().await?;
+                Ok(())
+            }
+            Err(e) => {
+                transaction.rollback().await?;
+                Err(e)
+            }
+        }
     }
 
     pub async fn update<T, U>(
