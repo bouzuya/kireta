@@ -1,5 +1,6 @@
 use std::{future::Future, pin::Pin};
 
+use axum::async_trait;
 use google_api_proto::google::firestore::v1::{
     firestore_client::FirestoreClient, get_document_request::ConsistencySelector,
     precondition::ConditionType, value::ValueType, write::Operation, BeginTransactionRequest,
@@ -94,6 +95,14 @@ impl Transaction {
 }
 
 #[derive(Debug, thiserror::Error)]
+pub enum TransactionError {
+    #[error("callback {0}")]
+    Callback(Box<dyn std::error::Error>),
+    #[error("rollback {0} {1}")]
+    Rollback(tonic::Status, Box<dyn std::error::Error>),
+}
+
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("credentials {0}")]
     Credentials(#[from] google_authz::CredentialsError),
@@ -105,6 +114,8 @@ pub enum Error {
     Serialize(#[from] serde_firestore_value::Error),
     #[error("status {0}")]
     Status(#[from] tonic::Status),
+    #[error("transaction {0}")]
+    Transaction(#[from] TransactionError),
     #[error("transport {0}")]
     Transport(#[from] tonic::transport::Error),
     #[error("value_type")]
@@ -252,9 +263,13 @@ impl Client {
             .map(|documents| (documents, next_page_token))
     }
 
-    pub async fn run_transaction<F>(&mut self, f: F) -> Result<(), Error>
+    pub async fn run_transaction<F>(&mut self, callback: F) -> Result<(), Error>
     where
-        F: FnOnce(&mut Transaction) -> Pin<Box<dyn Future<Output = Result<(), Error>> + '_>>,
+        F: FnOnce(
+            &mut Transaction,
+        ) -> Pin<
+            Box<dyn Future<Output = Result<(), Box<dyn std::error::Error>>> + Send + '_>,
+        >,
     {
         let response = self
             .client
@@ -269,7 +284,7 @@ impl Client {
             transaction,
             writes: vec![],
         };
-        match f(&mut transaction).await {
+        match callback(&mut transaction).await {
             Ok(()) => {
                 let response = self
                     .client
@@ -283,15 +298,21 @@ impl Client {
                 let CommitResponse { .. } = response.into_inner();
                 Ok(())
             }
-            Err(e) => {
-                // TODO: error handling
-                self.client
+            Err(callback_err) => {
+                match self
+                    .client
                     .rollback(RollbackRequest {
                         database: self.root_path.database_name(),
                         transaction: transaction.transaction,
                     })
-                    .await?;
-                Err(e)
+                    .await
+                {
+                    Ok(_) => Err(Error::Transaction(TransactionError::Callback(callback_err))),
+                    Err(rollback_err) => Err(Error::Transaction(TransactionError::Rollback(
+                        rollback_err,
+                        callback_err,
+                    ))),
+                }
             }
         }
     }
