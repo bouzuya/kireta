@@ -68,9 +68,12 @@ pub struct CollectionPath {
 }
 
 impl CollectionPath {
-    pub fn doc(self, document_id: String) -> DocumentPath {
+    pub fn doc<S>(self, document_id: S) -> DocumentPath
+    where
+        S: Into<String>,
+    {
         DocumentPath {
-            id: document_id,
+            id: document_id.into(),
             parent: self,
         }
     }
@@ -244,6 +247,21 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
+
+    #[test]
+    fn test_collection_path_doc() -> anyhow::Result<()> {
+        let colleciton_path = RootPath::new("demo-project1".to_string(), "(default)".to_string())?
+            .collection("users");
+        assert_eq!(
+            colleciton_path.clone().doc("1").path(),
+            "projects/demo-project1/databases/(default)/documents/users/1"
+        );
+        assert_eq!(
+            colleciton_path.doc("1".to_string()).path(),
+            "projects/demo-project1/databases/(default)/documents/users/1"
+        );
+        Ok(())
+    }
 
     #[test]
     fn test_root_path_collection() -> anyhow::Result<()> {
