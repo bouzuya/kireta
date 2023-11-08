@@ -6,9 +6,8 @@ pub mod timestamp;
 #[cfg(test)]
 mod tests {
     use crate::infra::firestore::{
-        client::{Client, Error, Transaction},
+        client::{Client, Error},
         document::Document,
-        path::DocumentPath,
     };
 
     #[tokio::test]
@@ -125,9 +124,7 @@ mod tests {
                 Box::pin(async move {
                     let got = transaction.get::<V>(&p).await?;
                     transaction.delete(&p, got.update_time())?;
-                    // rollback
-                    // TODO: custom error
-                    Err(Error::ValueType)
+                    Err(Error::ValueType)?
                 })
             })
             .await;

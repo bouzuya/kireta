@@ -1,6 +1,5 @@
 use std::{future::Future, pin::Pin};
 
-use axum::async_trait;
 use google_api_proto::google::firestore::v1::{
     firestore_client::FirestoreClient, get_document_request::ConsistencySelector,
     precondition::ConditionType, value::ValueType, write::Operation, BeginTransactionRequest,
@@ -97,9 +96,9 @@ impl Transaction {
 #[derive(Debug, thiserror::Error)]
 pub enum TransactionError {
     #[error("callback {0}")]
-    Callback(Box<dyn std::error::Error>),
+    Callback(Box<dyn std::error::Error + Send + Sync>),
     #[error("rollback {0} {1}")]
-    Rollback(tonic::Status, Box<dyn std::error::Error>),
+    Rollback(tonic::Status, Box<dyn std::error::Error + Send + Sync>),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -268,7 +267,11 @@ impl Client {
         F: FnOnce(
             &mut Transaction,
         ) -> Pin<
-            Box<dyn Future<Output = Result<(), Box<dyn std::error::Error>>> + Send + '_>,
+            Box<
+                dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>>
+                    + Send
+                    + '_,
+            >,
         >,
     {
         let response = self
@@ -353,5 +356,16 @@ impl Client {
             })
             .await?;
         Document::new(response.into_inner()).map_err(Error::Deserialize)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<Error>()
     }
 }
