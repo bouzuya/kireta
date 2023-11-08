@@ -438,7 +438,7 @@ mod tests {
         assert_eq!(root_path.project_id(), "demo-project1");
 
         // collection_path
-        let collection_path = root_path.collection("users".to_string());
+        let collection_path = root_path.collection("users");
         assert_eq!(collection_path.id(), "users");
         assert_eq!(
             collection_path.parent().path(),
@@ -454,7 +454,7 @@ mod tests {
         );
 
         // document_path
-        let document_path = collection_path.doc("1".to_string());
+        let document_path = collection_path.doc("1");
         assert_eq!(document_path.id(), "1");
         assert_eq!(
             document_path.parent().path(),
@@ -470,7 +470,7 @@ mod tests {
         );
 
         // collection_path (nested)
-        let nested_collection_path = document_path.collection("repositories".to_string());
+        let nested_collection_path = document_path.collection("repositories");
         assert_eq!(nested_collection_path.id(), "repositories");
         assert_eq!(
             nested_collection_path.parent().path(),
@@ -486,7 +486,7 @@ mod tests {
         );
 
         // document_path (nested)
-        let nested_document_path = nested_collection_path.doc("2".to_string());
+        let nested_document_path = nested_collection_path.doc("2");
         assert_eq!(nested_document_path.id(), "2");
         assert_eq!(
             nested_document_path.parent().path(),
