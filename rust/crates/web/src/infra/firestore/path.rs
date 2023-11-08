@@ -162,9 +162,12 @@ impl RootPath {
         })
     }
 
-    pub fn collection(self, collection_id: String) -> CollectionPath {
+    pub fn collection<S>(self, collection_id: S) -> CollectionPath
+    where
+        S: Into<String>,
+    {
         CollectionPath {
-            id: collection_id,
+            id: collection_id.into(),
             parent: Box::new(Path::from(self)),
         }
     }
@@ -241,6 +244,20 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
+
+    #[test]
+    fn test_root_path_collection() -> anyhow::Result<()> {
+        let root_path = RootPath::new("demo-project1".to_string(), "(default)".to_string())?;
+        assert_eq!(
+            root_path.clone().collection("users").path(),
+            "projects/demo-project1/databases/(default)/documents/users"
+        );
+        assert_eq!(
+            root_path.collection("users".to_string()).path(),
+            "projects/demo-project1/databases/(default)/documents/users"
+        );
+        Ok(())
+    }
 
     #[test]
     fn test_root_path_from_str() -> anyhow::Result<()> {
