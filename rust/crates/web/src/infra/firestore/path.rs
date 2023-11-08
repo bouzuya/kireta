@@ -160,11 +160,15 @@ pub struct RootPath {
 }
 
 impl RootPath {
-    pub fn new(project_id: String, database_id: String) -> Result<Self, Error> {
+    pub fn new<P, D>(project_id: P, database_id: D) -> Result<Self, Error>
+    where
+        P: Into<String>,
+        D: Into<String>,
+    {
         // TODO: check project_id and database_id format
         Ok(Self {
-            database_id,
-            project_id,
+            database_id: database_id.into(),
+            project_id: project_id.into(),
         })
     }
 
@@ -253,8 +257,7 @@ mod tests {
 
     #[test]
     fn test_collection_path_doc() -> anyhow::Result<()> {
-        let colleciton_path = RootPath::new("demo-project1".to_string(), "(default)".to_string())?
-            .collection("users");
+        let colleciton_path = RootPath::new("demo-project1", "(default)")?.collection("users");
         assert_eq!(
             colleciton_path.clone().doc("1").path(),
             "projects/demo-project1/databases/(default)/documents/users/1"
@@ -268,7 +271,7 @@ mod tests {
 
     #[test]
     fn test_document_path_collection() -> anyhow::Result<()> {
-        let document_path = RootPath::new("demo-project1".to_string(), "(default)".to_string())?
+        let document_path = RootPath::new("demo-project1", "(default)")?
             .collection("users")
             .doc("1");
         assert_eq!(
@@ -284,7 +287,7 @@ mod tests {
 
     #[test]
     fn test_root_path_collection() -> anyhow::Result<()> {
-        let root_path = RootPath::new("demo-project1".to_string(), "(default)".to_string())?;
+        let root_path = RootPath::new("demo-project1", "(default)")?;
         assert_eq!(
             root_path.clone().collection("users").path(),
             "projects/demo-project1/databases/(default)/documents/users"
@@ -292,6 +295,21 @@ mod tests {
         assert_eq!(
             root_path.collection("users".to_string()).path(),
             "projects/demo-project1/databases/(default)/documents/users"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_root_path_new() -> anyhow::Result<()> {
+        let root_path = RootPath::new("demo-project1", "(default)")?;
+        assert_eq!(
+            root_path.path(),
+            "projects/demo-project1/databases/(default)/documents"
+        );
+        let root_path = RootPath::new("demo-project1".to_string(), "(default)".to_string())?;
+        assert_eq!(
+            root_path.path(),
+            "projects/demo-project1/databases/(default)/documents"
         );
         Ok(())
     }
