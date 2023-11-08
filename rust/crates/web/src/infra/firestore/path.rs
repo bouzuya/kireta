@@ -114,9 +114,12 @@ pub struct DocumentPath {
 }
 
 impl DocumentPath {
-    pub fn collection(self, collection_id: String) -> CollectionPath {
+    pub fn collection<S>(self, collection_id: S) -> CollectionPath
+    where
+        S: Into<String>,
+    {
         CollectionPath {
-            id: collection_id,
+            id: collection_id.into(),
             parent: Box::new(Path::from(self)),
         }
     }
@@ -259,6 +262,22 @@ mod tests {
         assert_eq!(
             colleciton_path.doc("1".to_string()).path(),
             "projects/demo-project1/databases/(default)/documents/users/1"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_document_path_collection() -> anyhow::Result<()> {
+        let document_path = RootPath::new("demo-project1".to_string(), "(default)".to_string())?
+            .collection("users")
+            .doc("1");
+        assert_eq!(
+            document_path.clone().collection("repositories").path(),
+            "projects/demo-project1/databases/(default)/documents/users/1/repositories"
+        );
+        assert_eq!(
+            document_path.collection("repositories".to_string()).path(),
+            "projects/demo-project1/databases/(default)/documents/users/1/repositories"
         );
         Ok(())
     }
