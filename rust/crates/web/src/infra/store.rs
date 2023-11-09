@@ -1,6 +1,9 @@
 use axum::async_trait;
 
-use crate::{model, use_case::StoreTrait};
+use crate::{
+    model,
+    use_case::{self, StoreTrait},
+};
 
 #[derive(Clone, Debug)]
 pub struct InMemoryStore {
@@ -11,16 +14,16 @@ pub struct InMemoryStore {
 
 #[async_trait]
 impl StoreTrait for InMemoryStore {
-    async fn find_all_check_lists(&self) -> Vec<model::CheckList> {
-        self.check_lists.clone()
+    async fn find_all_check_lists(&self) -> Result<Vec<model::CheckList>, use_case::Error> {
+        Ok(self.check_lists.clone())
     }
 
-    async fn find_all_checks(&self) -> Vec<model::Check> {
-        self.checks.clone()
+    async fn find_all_checks(&self) -> Result<Vec<model::Check>, use_case::Error> {
+        Ok(self.checks.clone())
     }
 
-    async fn find_all_items(&self) -> Vec<model::Item> {
-        self.items.clone()
+    async fn find_all_items(&self) -> Result<Vec<model::Item>, use_case::Error> {
+        Ok(self.items.clone())
     }
 }
 

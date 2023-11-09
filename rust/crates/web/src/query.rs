@@ -31,6 +31,7 @@ impl QueryRoot {
         store
             .find_all_check_lists()
             .await
+            .unwrap()
             .into_iter()
             .map(CheckList)
             .collect()
@@ -38,6 +39,12 @@ impl QueryRoot {
 
     async fn items<'a>(&self, ctx: &Context<'a>) -> Vec<Item> {
         let store = &ctx.data_unchecked::<Data>().0;
-        store.find_all_items().await.into_iter().map(Item).collect()
+        store
+            .find_all_items()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(Item)
+            .collect()
     }
 }

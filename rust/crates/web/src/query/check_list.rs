@@ -20,9 +20,9 @@ impl CheckList {
 
     async fn checked_items(&self, context: &Context<'_>) -> Vec<Item> {
         let store = &context.data_unchecked::<Data>().0;
-        let items = store.find_all_items().await;
+        let items = store.find_all_items().await.unwrap();
         // TODO: Store::find_checks_by_check_list_id
-        let checks = store.find_all_checks().await;
+        let checks = store.find_all_checks().await.unwrap();
         checks
             .into_iter()
             .filter(|check| check.check_list_id == self.0.id)

@@ -3,11 +3,14 @@ use axum::async_trait;
 
 use crate::{model, mutation, query};
 
+#[derive(Clone, Debug, thiserror::Error)]
+pub enum Error {}
+
 #[async_trait]
 pub trait StoreTrait {
-    async fn find_all_check_lists(&self) -> Vec<model::CheckList>;
-    async fn find_all_checks(&self) -> Vec<model::Check>;
-    async fn find_all_items(&self) -> Vec<model::Item>;
+    async fn find_all_check_lists(&self) -> Result<Vec<model::CheckList>, Error>;
+    async fn find_all_checks(&self) -> Result<Vec<model::Check>, Error>;
+    async fn find_all_items(&self) -> Result<Vec<model::Item>, Error>;
 }
 
 pub trait HasSchema {
