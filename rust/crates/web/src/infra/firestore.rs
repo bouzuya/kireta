@@ -19,7 +19,7 @@ mod tests {
             endpoint,
         )
         .await?;
-        let collection_path = client.collection("repositories");
+        let collection_path = client.collection("repositories")?;
 
         assert_eq!(
             collection_path.path(),

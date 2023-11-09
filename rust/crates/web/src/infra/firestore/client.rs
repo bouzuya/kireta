@@ -162,8 +162,11 @@ impl Client {
         })
     }
 
-    pub fn collection(&self, collection_id: String) -> CollectionPath {
-        self.root_path.clone().collection(collection_id)
+    pub fn collection<S>(&self, collection_id: S) -> Result<CollectionPath, Error>
+    where
+        S: Into<String>,
+    {
+        Ok(self.root_path.clone().collection(collection_id)?)
     }
 
     pub async fn create<T, U>(
