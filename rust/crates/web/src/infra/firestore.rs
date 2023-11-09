@@ -40,7 +40,7 @@ mod tests {
         let input = V {
             k1: "v1".to_string(),
         };
-        let document_path = collection_path.clone().doc("1");
+        let document_path = collection_path.clone().doc("1")?;
         let created = client.create(&document_path, input.clone()).await?;
         assert_eq!(
             created.name().path(),
@@ -89,7 +89,7 @@ mod tests {
             endpoint,
         )
         .await?;
-        let collection_path = client.collection("transactions");
+        let collection_path = client.collection("transactions")?;
 
         // reset
         let (documents, _) = client.list::<V>(&collection_path).await?;
@@ -97,7 +97,7 @@ mod tests {
             client.delete(doc.name(), doc.update_time()).await?;
         }
 
-        let document_path = collection_path.doc("1");
+        let document_path = collection_path.doc("1")?;
 
         #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
         struct V {

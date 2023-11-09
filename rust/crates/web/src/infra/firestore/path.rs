@@ -68,14 +68,15 @@ pub struct CollectionPath {
 }
 
 impl CollectionPath {
-    pub fn doc<S>(self, document_id: S) -> DocumentPath
+    pub fn doc<S>(self, document_id: S) -> Result<DocumentPath, Error>
     where
         S: Into<String>,
     {
-        DocumentPath {
+        // TODO: check document_id format
+        Ok(DocumentPath {
             id: document_id.into(),
             parent: self,
-        }
+        })
     }
 
     pub fn id(&self) -> &str {
@@ -114,14 +115,15 @@ pub struct DocumentPath {
 }
 
 impl DocumentPath {
-    pub fn collection<S>(self, collection_id: S) -> CollectionPath
+    pub fn collection<S>(self, collection_id: S) -> Result<CollectionPath, Error>
     where
         S: Into<String>,
     {
-        CollectionPath {
+        // TODO: check collection_id format
+        Ok(CollectionPath {
             id: collection_id.into(),
             parent: Box::new(Path::from(self)),
-        }
+        })
     }
 
     pub fn id(&self) -> &str {
@@ -172,14 +174,15 @@ impl RootPath {
         })
     }
 
-    pub fn collection<S>(self, collection_id: S) -> CollectionPath
+    pub fn collection<S>(self, collection_id: S) -> Result<CollectionPath, Error>
     where
         S: Into<String>,
     {
-        CollectionPath {
+        // TODO: check collection_id format
+        Ok(CollectionPath {
             id: collection_id.into(),
             parent: Box::new(Path::from(self)),
-        }
+        })
     }
 
     pub fn database_id(&self) -> &str {
@@ -241,9 +244,9 @@ fn from_str(s: &str) -> Result<Path, Error> {
     });
     for s in parts.into_iter().skip(5).map(|s| s.to_string()) {
         path = match path {
-            Path::Collection(p) => Path::from(p.doc(s)),
-            Path::Document(p) => Path::from(p.collection(s)),
-            Path::Root(p) => Path::from(p.collection(s)),
+            Path::Collection(p) => Path::from(p.doc(s)?),
+            Path::Document(p) => Path::from(p.collection(s)?),
+            Path::Root(p) => Path::from(p.collection(s)?),
         };
     }
     Ok(path)
@@ -257,13 +260,13 @@ mod tests {
 
     #[test]
     fn test_collection_path_doc() -> anyhow::Result<()> {
-        let colleciton_path = RootPath::new("demo-project1", "(default)")?.collection("users");
+        let colleciton_path = RootPath::new("demo-project1", "(default)")?.collection("users")?;
         assert_eq!(
-            colleciton_path.clone().doc("1").path(),
+            colleciton_path.clone().doc("1")?.path(),
             "projects/demo-project1/databases/(default)/documents/users/1"
         );
         assert_eq!(
-            colleciton_path.doc("1".to_string()).path(),
+            colleciton_path.doc("1".to_string())?.path(),
             "projects/demo-project1/databases/(default)/documents/users/1"
         );
         Ok(())
@@ -272,14 +275,14 @@ mod tests {
     #[test]
     fn test_document_path_collection() -> anyhow::Result<()> {
         let document_path = RootPath::new("demo-project1", "(default)")?
-            .collection("users")
-            .doc("1");
+            .collection("users")?
+            .doc("1")?;
         assert_eq!(
-            document_path.clone().collection("repositories").path(),
+            document_path.clone().collection("repositories")?.path(),
             "projects/demo-project1/databases/(default)/documents/users/1/repositories"
         );
         assert_eq!(
-            document_path.collection("repositories".to_string()).path(),
+            document_path.collection("repositories".to_string())?.path(),
             "projects/demo-project1/databases/(default)/documents/users/1/repositories"
         );
         Ok(())
@@ -289,11 +292,11 @@ mod tests {
     fn test_root_path_collection() -> anyhow::Result<()> {
         let root_path = RootPath::new("demo-project1", "(default)")?;
         assert_eq!(
-            root_path.clone().collection("users").path(),
+            root_path.clone().collection("users")?.path(),
             "projects/demo-project1/databases/(default)/documents/users"
         );
         assert_eq!(
-            root_path.collection("users".to_string()).path(),
+            root_path.collection("users".to_string())?.path(),
             "projects/demo-project1/databases/(default)/documents/users"
         );
         Ok(())
@@ -420,7 +423,7 @@ mod tests {
     }
 
     #[test]
-    fn test() {
+    fn test() -> anyhow::Result<()> {
         // root_path
         let root_path = RootPath {
             database_id: "(default)".to_string(),
@@ -438,7 +441,7 @@ mod tests {
         assert_eq!(root_path.project_id(), "demo-project1");
 
         // collection_path
-        let collection_path = root_path.collection("users");
+        let collection_path = root_path.collection("users")?;
         assert_eq!(collection_path.id(), "users");
         assert_eq!(
             collection_path.parent().path(),
@@ -454,7 +457,7 @@ mod tests {
         );
 
         // document_path
-        let document_path = collection_path.doc("1");
+        let document_path = collection_path.doc("1")?;
         assert_eq!(document_path.id(), "1");
         assert_eq!(
             document_path.parent().path(),
@@ -470,7 +473,7 @@ mod tests {
         );
 
         // collection_path (nested)
-        let nested_collection_path = document_path.collection("repositories");
+        let nested_collection_path = document_path.collection("repositories")?;
         assert_eq!(nested_collection_path.id(), "repositories");
         assert_eq!(
             nested_collection_path.parent().path(),
@@ -486,7 +489,7 @@ mod tests {
         );
 
         // document_path (nested)
-        let nested_document_path = nested_collection_path.doc("2");
+        let nested_document_path = nested_collection_path.doc("2")?;
         assert_eq!(nested_document_path.id(), "2");
         assert_eq!(
             nested_document_path.parent().path(),
@@ -500,5 +503,6 @@ mod tests {
             nested_document_path.root().path(),
             "projects/demo-project1/databases/(default)/documents"
         );
+        Ok(())
     }
 }
