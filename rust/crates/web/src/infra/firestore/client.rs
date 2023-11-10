@@ -121,7 +121,7 @@ pub enum Error {
     ValueType,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Client {
     client: FirestoreClient<GoogleAuthz<Channel>>,
     root_path: RootPath,
