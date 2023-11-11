@@ -30,13 +30,11 @@ pub struct FirestoreStore {
 impl StoreTrait for FirestoreStore {
     async fn find_all_check_lists(&self) -> Result<Vec<model::CheckList>, use_case::Error> {
         let mut client = self.client.lock().await;
-        let collection_path = client.collection("check_lists").unwrap();
-        // TODO: unwrap
+        let collection_path = client.collection("check_lists")?;
         // TODO: pagination
         Ok(client
             .list::<CheckListDocumentData>(&collection_path)
-            .await
-            .unwrap()
+            .await?
             .0
             .into_iter()
             .map(|doc| doc.data())

@@ -12,7 +12,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use serde_firestore_value::to_value;
 use tonic::transport::Channel;
 
-use crate::infra::firestore::document;
+use crate::{infra::firestore::document, use_case};
 
 use super::{
     document::Document,
@@ -119,6 +119,12 @@ pub enum Error {
     Transport(#[from] tonic::transport::Error),
     #[error("value_type")]
     ValueType,
+}
+
+impl From<Error> for use_case::Error {
+    fn from(value: Error) -> Self {
+        use_case::Error::Unknown(value.to_string())
+    }
 }
 
 #[derive(Clone, Debug)]

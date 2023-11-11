@@ -4,7 +4,10 @@ use axum::async_trait;
 use crate::{model, mutation, query};
 
 #[derive(Clone, Debug, thiserror::Error)]
-pub enum Error {}
+pub enum Error {
+    #[error("unknown {0}")]
+    Unknown(String),
+}
 
 #[async_trait]
 pub trait StoreTrait {
