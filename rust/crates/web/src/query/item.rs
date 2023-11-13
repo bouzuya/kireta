@@ -20,12 +20,15 @@ impl Item {
         &self.0.name
     }
 
-    async fn checked_check_lists(&self, context: &Context<'_>) -> Vec<CheckList> {
+    async fn checked_check_lists(
+        &self,
+        context: &Context<'_>,
+    ) -> async_graphql::Result<Vec<CheckList>> {
         let store = &context.data_unchecked::<Data>().0;
-        let check_lists = store.find_all_check_lists().await.unwrap();
+        let check_lists = store.find_all_check_lists().await?;
         // TODO: Store::find_checks_by_item_id
-        let checks = store.find_all_checks().await.unwrap();
-        checks
+        let checks = store.find_all_checks().await?;
+        Ok(checks
             .into_iter()
             .filter(|check| check.item_id == self.0.id)
             .map(|check| {
@@ -33,9 +36,9 @@ impl Item {
                     .iter()
                     .find(|check_list| check_list.id == check.check_list_id)
                     .cloned()
-                    .unwrap()
+                    .expect("check list not found")
             })
             .map(CheckList)
-            .collect()
+            .collect())
     }
 }

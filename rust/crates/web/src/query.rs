@@ -26,25 +26,26 @@ impl QueryRoot {
         a + b
     }
 
-    async fn check_lists<'a>(&self, context: &Context<'a>) -> Vec<CheckList> {
+    async fn check_lists<'a>(
+        &self,
+        context: &Context<'a>,
+    ) -> async_graphql::Result<Vec<CheckList>> {
         let store = &context.data_unchecked::<Data>().0;
-        store
+        Ok(store
             .find_all_check_lists()
-            .await
-            .unwrap()
+            .await?
             .into_iter()
             .map(CheckList)
-            .collect()
+            .collect())
     }
 
-    async fn items<'a>(&self, ctx: &Context<'a>) -> Vec<Item> {
+    async fn items<'a>(&self, ctx: &Context<'a>) -> async_graphql::Result<Vec<Item>> {
         let store = &ctx.data_unchecked::<Data>().0;
-        store
+        Ok(store
             .find_all_items()
-            .await
-            .unwrap()
+            .await?
             .into_iter()
             .map(Item)
-            .collect()
+            .collect())
     }
 }
