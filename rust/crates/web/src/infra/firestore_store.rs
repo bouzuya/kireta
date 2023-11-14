@@ -4,7 +4,7 @@ use axum::async_trait;
 
 use crate::{
     model::{self, CheckList},
-    use_case::{self, StoreTrait},
+    use_case::{self, Store},
 };
 
 use super::firestore::client::Client;
@@ -27,7 +27,7 @@ pub struct FirestoreStore {
 }
 
 #[async_trait]
-impl StoreTrait for FirestoreStore {
+impl Store for FirestoreStore {
     async fn find_all_check_lists(&self) -> Result<Vec<model::CheckList>, use_case::Error> {
         let mut client = self.client.lock().await;
         let collection_path = client.collection("check_lists")?;

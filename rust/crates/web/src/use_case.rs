@@ -10,7 +10,7 @@ pub enum Error {
 }
 
 #[async_trait]
-pub trait StoreTrait {
+pub trait Store {
     async fn find_all_check_lists(&self) -> Result<Vec<model::CheckList>, Error>;
     async fn find_all_checks(&self) -> Result<Vec<model::Check>, Error>;
     async fn find_all_items(&self) -> Result<Vec<model::Item>, Error>;
@@ -22,6 +22,6 @@ pub trait HasSchema {
 }
 
 pub trait HasStore {
-    type Store: StoreTrait + Send + Sync + 'static;
+    type Store: Store + Send + Sync + 'static;
     fn store(&self) -> Self::Store;
 }

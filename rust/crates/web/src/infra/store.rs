@@ -2,7 +2,7 @@ use axum::async_trait;
 
 use crate::{
     model,
-    use_case::{self, StoreTrait},
+    use_case::{self, Store},
 };
 
 #[derive(Clone, Debug)]
@@ -13,7 +13,7 @@ pub struct InMemoryStore {
 }
 
 #[async_trait]
-impl StoreTrait for InMemoryStore {
+impl Store for InMemoryStore {
     async fn find_all_check_lists(&self) -> Result<Vec<model::CheckList>, use_case::Error> {
         Ok(self.check_lists.clone())
     }

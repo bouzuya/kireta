@@ -10,7 +10,7 @@ use axum::{
     routing, Router,
 };
 
-use crate::use_case::{HasSchema, HasStore, StoreTrait};
+use crate::use_case::{HasSchema, HasStore, Store};
 
 async fn handler<T: HasSchema + HasStore>(
     State(state): State<T>,
@@ -33,7 +33,7 @@ async fn graphiql() -> impl IntoResponse {
     Html(GraphiQLSource::build().endpoint("/graphql").finish())
 }
 
-pub struct Data(pub Box<dyn StoreTrait + Send + Sync + 'static>);
+pub struct Data(pub Box<dyn Store + Send + Sync + 'static>);
 
 pub fn route<T: Clone + HasSchema + HasStore + Send + Sync + 'static>(store: T) -> Router {
     Router::new()
