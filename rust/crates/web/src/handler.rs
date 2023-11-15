@@ -9,6 +9,7 @@ use axum::{
     response::{Html, IntoResponse},
     routing, Router,
 };
+use hyper::StatusCode;
 
 use crate::use_case::{HasSchema, HasStore, Store};
 
@@ -16,17 +17,17 @@ async fn handler<T: HasSchema + HasStore>(
     State(state): State<T>,
     header_map: HeaderMap,
     request: GraphQLRequest,
-) -> GraphQLResponse {
+) -> Result<GraphQLResponse, StatusCode> {
     let schema = state.schema();
     let store = state.store();
     let request = request.into_inner().data(Data(Box::new(store)));
     let request = if let Some(header_value) = header_map.get(axum::http::header::AUTHORIZATION) {
-        let bearer = Bearer::decode(header_value).unwrap();
+        let bearer = Bearer::decode(header_value).ok_or(StatusCode::UNAUTHORIZED)?;
         request.data(bearer)
     } else {
         request
     };
-    GraphQLResponse::from(schema.execute(request).await)
+    Ok(GraphQLResponse::from(schema.execute(request).await))
 }
 
 async fn graphiql() -> impl IntoResponse {
