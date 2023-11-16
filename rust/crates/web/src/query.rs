@@ -30,7 +30,7 @@ impl QueryRoot {
         &self,
         context: &Context<'a>,
     ) -> async_graphql::Result<Vec<CheckList>> {
-        let store = &context.data_unchecked::<Data>().0;
+        let store = &context.data_unchecked::<Data>().state;
         Ok(store
             .find_all_check_lists()
             .await?
@@ -40,7 +40,7 @@ impl QueryRoot {
     }
 
     async fn items<'a>(&self, ctx: &Context<'a>) -> async_graphql::Result<Vec<Item>> {
-        let store = &ctx.data_unchecked::<Data>().0;
+        let store = &ctx.data_unchecked::<Data>().state;
         Ok(store
             .find_all_items()
             .await?

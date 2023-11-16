@@ -20,13 +20,15 @@ async fn handler<T: HasSchema + HasStore>(
 ) -> Result<GraphQLResponse, StatusCode> {
     let schema = state.schema();
     let store = state.store();
-    let request = request.into_inner().data(Data(Box::new(store)));
-    let request = if let Some(header_value) = header_map.get(axum::http::header::AUTHORIZATION) {
-        let bearer = Bearer::decode(header_value).ok_or(StatusCode::UNAUTHORIZED)?;
-        request.data(bearer)
-    } else {
-        request
-    };
+    let request = request.into_inner().data(Data {
+        bearer: match header_map.get(axum::http::header::AUTHORIZATION) {
+            Some(header_value) => {
+                Some(Bearer::decode(header_value).ok_or(StatusCode::UNAUTHORIZED)?)
+            }
+            None => None,
+        },
+        state: Box::new(store),
+    });
     Ok(GraphQLResponse::from(schema.execute(request).await))
 }
 
@@ -34,7 +36,10 @@ async fn graphiql() -> impl IntoResponse {
     Html(GraphiQLSource::build().endpoint("/graphql").finish())
 }
 
-pub struct Data(pub Box<dyn Store + Send + Sync + 'static>);
+pub struct Data {
+    pub bearer: Option<Bearer>,
+    pub state: Box<dyn Store + Send + Sync + 'static>,
+}
 
 pub fn route<T: Clone + HasSchema + HasStore + Send + Sync + 'static>() -> Router<T> {
     Router::new().route("/graphql", routing::get(graphiql).post(handler::<T>))
