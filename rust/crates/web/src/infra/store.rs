@@ -25,6 +25,17 @@ impl Store for InMemoryStore {
     async fn find_all_items(&self) -> Result<Vec<model::Item>, use_case::Error> {
         Ok(self.items.clone())
     }
+    async fn find_checks_by_check_list_id(
+        &self,
+        check_list_id: String,
+    ) -> Result<Vec<model::Check>, use_case::Error> {
+        Ok(self
+            .checks
+            .iter()
+            .filter(|check| check.check_list_id == check_list_id)
+            .cloned()
+            .collect())
+    }
 }
 
 impl InMemoryStore {
