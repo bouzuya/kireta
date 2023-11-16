@@ -1,3 +1,5 @@
+mod root;
+
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
@@ -38,7 +40,7 @@ pub struct Data(pub Box<dyn Store + Send + Sync + 'static>);
 
 pub fn route<T: Clone + HasSchema + HasStore + Send + Sync + 'static>(store: T) -> Router {
     Router::new()
+        .merge(root::route::<T>())
         .route("/graphql", routing::get(graphiql).post(handler::<T>))
-        .route("/", routing::get(|| async { "Hello, World!" }))
         .with_state(store)
 }
