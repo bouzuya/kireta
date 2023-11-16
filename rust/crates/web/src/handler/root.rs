@@ -1,11 +1,11 @@
 use axum::{routing, Router};
 
-async fn handler<T>() -> &'static str {
+async fn handler() -> &'static str {
     "Hello, World!"
 }
 
 pub fn route<T: Clone + Send + Sync + 'static>() -> Router<T> {
-    Router::new().route("/", routing::get(handler::<T>))
+    Router::new().route("/", routing::get(handler))
 }
 
 #[cfg(test)]
