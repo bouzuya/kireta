@@ -52,18 +52,17 @@ mod tests {
         app::App,
         test_utils::{send_request, ResponseExt},
     };
-    use axum::http::{Request, StatusCode};
 
     #[tokio::test]
     async fn test_get() -> anyhow::Result<()> {
         let app = route().with_state(App::example());
-        let request = Request::builder()
+        let request = axum::http::Request::builder()
             .method("GET")
             .uri("/graphql")
-            .body(hyper::Body::empty())?;
+            .body(axum::body::Body::empty())?;
         let response = send_request(app, request).await?;
 
-        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
         assert!(response
             .into_body_as_string()
             .await?
@@ -74,17 +73,40 @@ mod tests {
     #[tokio::test]
     async fn test_post() -> anyhow::Result<()> {
         let app = route().with_state(App::example());
-        let request = Request::builder()
+        let request = axum::http::Request::builder()
             .method("POST")
             .uri("/graphql")
-            .header(hyper::header::CONTENT_TYPE, "application/json")
-            .body(hyper::Body::from(r#"{"query":"query test { hello }"}"#))?;
+            .header(axum::http::header::CONTENT_TYPE, "application/json")
+            .body(axum::body::Body::from(
+                r#"{"query":"query test_post { hello }"}"#,
+            ))?;
         let response = send_request(app, request).await?;
 
-        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
         assert_eq!(
             response.into_body_as_string().await?,
             r#"{"data":{"hello":"Hello, World!"}}"#
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_post_bearer() -> anyhow::Result<()> {
+        let app = route().with_state(App::example());
+        let request = axum::http::Request::builder()
+            .method("POST")
+            .uri("/graphql")
+            .header(axum::http::header::AUTHORIZATION, "Bearer test")
+            .header(axum::http::header::CONTENT_TYPE, "application/json")
+            .body(axum::body::Body::from(
+                r#"{"query":"query test_post_bearer { bearer }"}"#,
+            ))?;
+        let response = send_request(app, request).await?;
+
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        assert_eq!(
+            response.into_body_as_string().await?,
+            r#"{"data":{"bearer":"test"}}"#
         );
         Ok(())
     }
