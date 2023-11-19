@@ -19,7 +19,7 @@ impl CheckList {
     }
 
     async fn checked_items(&self, context: &Context<'_>) -> async_graphql::Result<Vec<Item>> {
-        let store = &context.data_unchecked::<Data>().state;
+        let store = &context.data_unchecked::<Data>().store;
         let items = store.find_all_items().await?;
         // TODO: Store::find_checks_by_check_list_id
         let checks = store.find_all_checks().await?;

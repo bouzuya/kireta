@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_graphql::{EmptySubscription, Schema};
 use axum::async_trait;
 
@@ -26,6 +28,5 @@ pub trait HasSchema {
 }
 
 pub trait HasStore {
-    type Store: Store + Send + Sync + 'static;
-    fn store(&self) -> Self::Store;
+    fn store(&self) -> Arc<dyn Store + Send + Sync>;
 }

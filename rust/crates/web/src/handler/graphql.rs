@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
@@ -27,7 +29,7 @@ async fn handler<T: HasSchema + HasStore>(
             }
             None => None,
         },
-        state: Box::new(store),
+        store,
     });
     Ok(GraphQLResponse::from(schema.execute(request).await))
 }
@@ -38,7 +40,7 @@ async fn graphiql() -> impl IntoResponse {
 
 pub struct Data {
     pub bearer: Option<Bearer>,
-    pub state: Box<dyn Store + Send + Sync + 'static>,
+    pub store: Arc<dyn Store + Send + Sync>,
 }
 
 pub fn route<T: Clone + HasSchema + HasStore + Send + Sync + 'static>() -> Router<T> {

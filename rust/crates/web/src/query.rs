@@ -14,8 +14,8 @@ pub struct QueryRoot;
 #[async_graphql::Object]
 impl QueryRoot {
     async fn bearer<'a>(&self, context: &Context<'a>) -> &'a str {
-        let bearer = context.data_unchecked::<Bearer>();
-        bearer.token()
+        let data = context.data_unchecked::<Data>();
+        data.bearer.as_ref().unwrap().token()
     }
 
     async fn hello(&self) -> &'static str {
@@ -30,7 +30,7 @@ impl QueryRoot {
         &self,
         context: &Context<'a>,
     ) -> async_graphql::Result<Vec<CheckList>> {
-        let store = &context.data_unchecked::<Data>().state;
+        let store = &context.data_unchecked::<Data>().store;
         Ok(store
             .find_all_check_lists()
             .await?
@@ -40,7 +40,7 @@ impl QueryRoot {
     }
 
     async fn items<'a>(&self, ctx: &Context<'a>) -> async_graphql::Result<Vec<Item>> {
-        let store = &ctx.data_unchecked::<Data>().state;
+        let store = &ctx.data_unchecked::<Data>().store;
         Ok(store
             .find_all_items()
             .await?

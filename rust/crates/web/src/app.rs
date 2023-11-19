@@ -1,16 +1,18 @@
+use std::sync::Arc;
+
 use async_graphql::{EmptySubscription, Schema};
 
 use crate::{
     infra::store::InMemoryStore,
     mutation::MutationRoot,
     query::QueryRoot,
-    use_case::{HasSchema, HasStore},
+    use_case::{HasSchema, HasStore, Store},
 };
 
 #[derive(Clone)]
 pub struct App {
     schema: Schema<QueryRoot, MutationRoot, EmptySubscription>,
-    store: InMemoryStore,
+    store: Arc<InMemoryStore>,
 }
 
 impl App {
@@ -18,7 +20,7 @@ impl App {
         let schema = Schema::new(QueryRoot, MutationRoot, EmptySubscription);
         Self {
             schema,
-            store: InMemoryStore::example(),
+            store: Arc::new(InMemoryStore::example()),
         }
     }
 }
@@ -30,8 +32,7 @@ impl HasSchema for App {
 }
 
 impl HasStore for App {
-    type Store = InMemoryStore;
-    fn store(&self) -> Self::Store {
+    fn store(&self) -> Arc<dyn Store + Send + Sync> {
         self.store.clone()
     }
 }
