@@ -1,33 +1,29 @@
 use std::sync::Arc;
 
-use async_graphql::{EmptySubscription, Schema};
-
 use crate::{
-    handler::graphql::mutation::MutationRoot,
-    handler::{graphql::query::QueryRoot, HasGraphQLSchema},
+    handler::{graphql::GraphQLSchema, HasGraphQLSchema},
     infra::store::InMemoryStore,
     use_case::{HasStore, Store},
 };
 
 #[derive(Clone)]
 pub struct App {
-    schema: Schema<QueryRoot, MutationRoot, EmptySubscription>,
+    graphql_schema: GraphQLSchema,
     store: Arc<InMemoryStore>,
 }
 
 impl App {
     pub fn example() -> Self {
-        let schema = Schema::new(QueryRoot, MutationRoot, EmptySubscription);
         Self {
-            schema,
+            graphql_schema: GraphQLSchema::new(),
             store: Arc::new(InMemoryStore::example()),
         }
     }
 }
 
 impl HasGraphQLSchema for App {
-    fn schema(&self) -> &Schema<QueryRoot, MutationRoot, EmptySubscription> {
-        &self.schema
+    fn graphql_schema(&self) -> &GraphQLSchema {
+        &self.graphql_schema
     }
 }
 

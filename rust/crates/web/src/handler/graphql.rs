@@ -1,5 +1,5 @@
-pub mod mutation;
-pub mod query;
+mod mutation;
+mod query;
 
 use std::sync::Arc;
 
@@ -18,15 +18,19 @@ use hyper::StatusCode;
 
 use crate::use_case::{HasStore, Store};
 
+use self::{mutation::MutationRoot, query::QueryRoot};
+
+#[derive(Clone)]
+pub struct GraphQLSchema(Schema<QueryRoot, MutationRoot, EmptySubscription>);
+
+impl GraphQLSchema {
+    pub fn new() -> Self {
+        Self(Schema::new(QueryRoot, MutationRoot, EmptySubscription))
+    }
+}
+
 pub trait HasGraphQLSchema {
-    // TODO: query, mutation, subscription
-    fn schema(
-        &self,
-    ) -> &Schema<
-        crate::handler::graphql::query::QueryRoot,
-        crate::handler::graphql::mutation::MutationRoot,
-        EmptySubscription,
-    >;
+    fn graphql_schema(&self) -> &GraphQLSchema;
 }
 
 async fn handler<T: HasGraphQLSchema + HasStore>(
@@ -34,7 +38,7 @@ async fn handler<T: HasGraphQLSchema + HasStore>(
     header_map: HeaderMap,
     request: GraphQLRequest,
 ) -> Result<GraphQLResponse, StatusCode> {
-    let schema = state.schema();
+    let schema = state.graphql_schema();
     let store = state.store();
     let request = request.into_inner().data(Data {
         bearer: match header_map.get(axum::http::header::AUTHORIZATION) {
@@ -45,7 +49,7 @@ async fn handler<T: HasGraphQLSchema + HasStore>(
         },
         store,
     });
-    Ok(GraphQLResponse::from(schema.execute(request).await))
+    Ok(GraphQLResponse::from(schema.0.execute(request).await))
 }
 
 async fn graphiql() -> impl IntoResponse {
