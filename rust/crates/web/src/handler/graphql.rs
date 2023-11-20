@@ -1,9 +1,9 @@
+mod graphql_data;
+mod graphql_schema;
 mod mutation;
 mod query;
 
-use std::sync::Arc;
-
-use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
+use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
     extract::State,
@@ -16,31 +16,27 @@ use axum::{
 };
 use hyper::StatusCode;
 
-use crate::use_case::{HasStore, Store};
+use crate::use_case::HasStore;
 
-use self::{mutation::MutationRoot, query::QueryRoot};
-
-#[derive(Clone)]
-pub struct GraphQLSchema(Schema<QueryRoot, MutationRoot, EmptySubscription>);
-
-impl GraphQLSchema {
-    pub fn new() -> Self {
-        Self(Schema::new(QueryRoot, MutationRoot, EmptySubscription))
-    }
-}
+use self::graphql_data::GraphQLData;
+pub use self::graphql_schema::GraphQLSchema;
 
 pub trait HasGraphQLSchema {
     fn graphql_schema(&self) -> &GraphQLSchema;
 }
 
-async fn handler<T: HasGraphQLSchema + HasStore>(
+async fn get_handler() -> impl IntoResponse {
+    Html(GraphiQLSource::build().endpoint("/graphql").finish())
+}
+
+async fn post_handler<T: HasGraphQLSchema + HasStore>(
     State(state): State<T>,
     header_map: HeaderMap,
     request: GraphQLRequest,
 ) -> Result<GraphQLResponse, StatusCode> {
     let schema = state.graphql_schema();
     let store = state.store();
-    let request = request.into_inner().data(Data {
+    let request = request.into_inner().data(GraphQLData {
         bearer: match header_map.get(axum::http::header::AUTHORIZATION) {
             Some(header_value) => {
                 Some(Bearer::decode(header_value).ok_or(StatusCode::UNAUTHORIZED)?)
@@ -49,20 +45,14 @@ async fn handler<T: HasGraphQLSchema + HasStore>(
         },
         store,
     });
-    Ok(GraphQLResponse::from(schema.0.execute(request).await))
-}
-
-async fn graphiql() -> impl IntoResponse {
-    Html(GraphiQLSource::build().endpoint("/graphql").finish())
-}
-
-pub struct Data {
-    pub bearer: Option<Bearer>,
-    pub store: Arc<dyn Store + Send + Sync>,
+    Ok(GraphQLResponse::from(schema.execute(request).await))
 }
 
 pub fn route<T: Clone + HasGraphQLSchema + HasStore + Send + Sync + 'static>() -> Router<T> {
-    Router::new().route("/graphql", routing::get(graphiql).post(handler::<T>))
+    Router::new().route(
+        "/graphql",
+        routing::get(get_handler).post(post_handler::<T>),
+    )
 }
 
 #[cfg(test)]

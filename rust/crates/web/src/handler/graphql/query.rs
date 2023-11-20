@@ -4,16 +4,16 @@ mod item;
 
 use async_graphql::Context;
 
-use crate::handler::Data;
-
 use self::{check_list::CheckList, item::Item};
+
+use super::graphql_data::GraphQLData;
 
 pub struct QueryRoot;
 
 #[async_graphql::Object]
 impl QueryRoot {
     async fn bearer<'a>(&self, context: &Context<'a>) -> &'a str {
-        let data = context.data_unchecked::<Data>();
+        let data = context.data_unchecked::<GraphQLData>();
         data.bearer.as_ref().unwrap().token()
     }
 
@@ -29,7 +29,7 @@ impl QueryRoot {
         &self,
         context: &Context<'a>,
     ) -> async_graphql::Result<Vec<CheckList>> {
-        let store = &context.data_unchecked::<Data>().store;
+        let store = &context.data_unchecked::<GraphQLData>().store;
         Ok(store
             .find_all_check_lists()
             .await?
@@ -39,7 +39,7 @@ impl QueryRoot {
     }
 
     async fn items<'a>(&self, ctx: &Context<'a>) -> async_graphql::Result<Vec<Item>> {
-        let store = &ctx.data_unchecked::<Data>().store;
+        let store = &ctx.data_unchecked::<GraphQLData>().store;
         Ok(store
             .find_all_items()
             .await?
