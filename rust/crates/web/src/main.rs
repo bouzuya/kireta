@@ -2,7 +2,6 @@ mod app;
 mod handler;
 mod infra;
 mod model;
-mod mutation;
 #[cfg(test)]
 mod test_utils;
 mod use_case;

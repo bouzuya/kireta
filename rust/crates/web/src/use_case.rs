@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_graphql::{EmptySubscription, Schema};
 use axum::async_trait;
 
-use crate::{model, mutation};
+use crate::model;
 
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum Error {
@@ -26,7 +26,11 @@ pub trait HasSchema {
     // TODO: query, mutation, subscription
     fn schema(
         &self,
-    ) -> &Schema<crate::handler::graphql::query::QueryRoot, mutation::MutationRoot, EmptySubscription>;
+    ) -> &Schema<
+        crate::handler::graphql::query::QueryRoot,
+        crate::handler::graphql::mutation::MutationRoot,
+        EmptySubscription,
+    >;
 }
 
 pub trait HasStore {

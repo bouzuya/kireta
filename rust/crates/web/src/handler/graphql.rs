@@ -1,3 +1,4 @@
+pub mod mutation;
 pub mod query;
 
 use std::sync::Arc;
