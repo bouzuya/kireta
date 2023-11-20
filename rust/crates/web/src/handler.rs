@@ -1,4 +1,4 @@
-mod graphql;
+pub mod graphql;
 mod root;
 
 use axum::Router;

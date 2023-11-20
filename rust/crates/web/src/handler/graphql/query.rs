@@ -3,7 +3,6 @@ mod check_list;
 mod item;
 
 use async_graphql::Context;
-use axum::headers::authorization::Bearer;
 
 use crate::handler::Data;
 

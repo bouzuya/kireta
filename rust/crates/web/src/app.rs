@@ -3,9 +3,9 @@ use std::sync::Arc;
 use async_graphql::{EmptySubscription, Schema};
 
 use crate::{
+    handler::graphql::query::QueryRoot,
     infra::store::InMemoryStore,
     mutation::MutationRoot,
-    query::QueryRoot,
     use_case::{HasSchema, HasStore, Store},
 };
 

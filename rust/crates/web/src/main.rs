@@ -3,7 +3,6 @@ mod handler;
 mod infra;
 mod model;
 mod mutation;
-mod query;
 #[cfg(test)]
 mod test_utils;
 mod use_case;
