@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use async_graphql::{EmptySubscription, Schema};
 use axum::async_trait;
 
 use crate::model;
@@ -20,17 +19,6 @@ pub trait Store {
         &self,
         check_list_id: String,
     ) -> Result<Vec<model::Check>, Error>;
-}
-
-pub trait HasSchema {
-    // TODO: query, mutation, subscription
-    fn schema(
-        &self,
-    ) -> &Schema<
-        crate::handler::graphql::query::QueryRoot,
-        crate::handler::graphql::mutation::MutationRoot,
-        EmptySubscription,
-    >;
 }
 
 pub trait HasStore {

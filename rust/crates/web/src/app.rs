@@ -4,9 +4,9 @@ use async_graphql::{EmptySubscription, Schema};
 
 use crate::{
     handler::graphql::mutation::MutationRoot,
-    handler::graphql::query::QueryRoot,
+    handler::{graphql::query::QueryRoot, HasGraphQLSchema},
     infra::store::InMemoryStore,
-    use_case::{HasSchema, HasStore, Store},
+    use_case::{HasStore, Store},
 };
 
 #[derive(Clone)]
@@ -25,7 +25,7 @@ impl App {
     }
 }
 
-impl HasSchema for App {
+impl HasGraphQLSchema for App {
     fn schema(&self) -> &Schema<QueryRoot, MutationRoot, EmptySubscription> {
         &self.schema
     }
