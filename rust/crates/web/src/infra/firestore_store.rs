@@ -57,3 +57,45 @@ impl Store for FirestoreStore {
         todo!()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::infra::firestore::document::Document;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test() -> anyhow::Result<()> {
+        let endpoint = "http://firebase:8080";
+        let mut client = Client::new(
+            "demo-project1".to_string(),
+            "(default)".to_string(),
+            endpoint,
+        )
+        .await?;
+        let collection = client.collection("check_lists")?;
+        let doc = collection.doc("1")?;
+
+        let input = CheckListDocumentData {
+            date: "2020-01-02".to_string(),
+            id: "1".to_string(),
+        };
+        let created: Document<CheckListDocumentData> = client.create(&doc, input).await?;
+
+        let store = FirestoreStore {
+            client: Arc::new(tokio::sync::Mutex::new(client.clone())),
+        };
+        let found = store.find_all_check_lists().await?;
+        assert_eq!(
+            found,
+            vec![CheckList {
+                id: "1".to_string(),
+                date: "2020-01-02".to_string()
+            }]
+        );
+
+        client.delete(&doc, created.update_time()).await?;
+
+        Ok(())
+    }
+}
