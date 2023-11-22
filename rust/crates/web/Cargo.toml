@@ -16,12 +16,15 @@ google-authz = { version = "1.0.0-alpha.5", features = ["tonic"] }
 hyper = { version = "0.14.27", features = ["full"] }
 prost = "0.12.1"
 prost-types = "0.12"
+rand = "0.8.5"
 serde = { version = "1.0.190", features = ["derive"] }
 serde-firestore-value = "0.2.0"
 thiserror = "1.0.50"
+time = { version = "0.3.30", features = ["rand"] }
 tokio = { version = "1.32.0", features = ["full"] }
 tonic = { version = "0.10", features = ["tls-webpki-roots"] }
 tower = "0.4.13"
+uuid = { version = "1.6.1", features = ["v4"] }
 
 [dev-dependencies]
 serde_json = "1.0.107"
