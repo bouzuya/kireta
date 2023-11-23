@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::async_trait;
 
 use crate::{
-    model::{self, CheckList},
+    model::{self, Check, CheckList, Item},
     use_case::{self, Store},
 };
 
@@ -18,6 +18,38 @@ pub struct CheckListDocumentData {
 impl From<CheckListDocumentData> for model::CheckList {
     fn from(CheckListDocumentData { date, id }: CheckListDocumentData) -> Self {
         Self { date, id }
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct CheckDocumentData {
+    pub check_list_id: String,
+    pub item_id: String,
+}
+
+impl From<CheckDocumentData> for model::Check {
+    fn from(
+        CheckDocumentData {
+            check_list_id,
+            item_id,
+        }: CheckDocumentData,
+    ) -> Self {
+        Self {
+            check_list_id,
+            item_id,
+        }
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct ItemDocumentData {
+    pub id: String,
+    pub name: String,
+}
+
+impl From<ItemDocumentData> for model::Item {
+    fn from(ItemDocumentData { id, name }: ItemDocumentData) -> Self {
+        Self { id, name }
     }
 }
 
@@ -42,19 +74,45 @@ impl Store for FirestoreStore {
             .collect())
     }
 
+    // TODO: remove
     async fn find_all_checks(&self) -> Result<Vec<model::Check>, use_case::Error> {
-        todo!()
+        let mut client = self.client.lock().await;
+        let collection_path = client.collection("checks")?;
+        Ok(client
+            .list::<CheckDocumentData>(&collection_path)
+            .await?
+            .0
+            .into_iter()
+            .map(|doc| doc.data())
+            .map(Check::from)
+            .collect())
     }
 
     async fn find_all_items(&self) -> Result<Vec<model::Item>, use_case::Error> {
-        todo!()
+        let mut client = self.client.lock().await;
+        let collection_path = client.collection("items")?;
+        // TODO: pagination
+        Ok(client
+            .list::<ItemDocumentData>(&collection_path)
+            .await?
+            .0
+            .into_iter()
+            .map(|doc| doc.data())
+            .map(Item::from)
+            .collect())
     }
 
     async fn find_checks_by_check_list_id(
         &self,
         check_list_id: String,
     ) -> Result<Vec<model::Check>, use_case::Error> {
-        todo!()
+        // TODO: improve perfomance
+        Ok(self
+            .find_all_checks()
+            .await?
+            .into_iter()
+            .filter(|check| check.check_list_id == check_list_id)
+            .collect())
     }
 }
 
@@ -65,7 +123,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test() -> anyhow::Result<()> {
+    async fn test_find_all_check_lists() -> anyhow::Result<()> {
         let endpoint = "http://firebase:8080";
         let mut client = Client::new(
             "demo-project1".to_string(),
