@@ -246,7 +246,7 @@ impl Client {
     pub async fn list<U>(
         &mut self,
         collection_path: &CollectionPath,
-    ) -> Result<(Vec<Document<U>>, String), Error>
+    ) -> Result<(Vec<Document<U>>, Option<String>), Error>
     where
         U: DeserializeOwned,
     {
@@ -268,7 +268,12 @@ impl Client {
             .map(Document::new)
             .collect::<Result<Vec<Document<U>>, document::Error>>()
             .map_err(Error::Deserialize)
-            .map(|documents| (documents, next_page_token))
+            .map(|documents| {
+                (
+                    documents,
+                    next_page_token.is_empty().then_some(next_page_token),
+                )
+            })
     }
 
     pub async fn run_transaction<F>(&mut self, callback: F) -> Result<(), Error>
