@@ -19,6 +19,10 @@ pub trait Store {
         &self,
         check_list_id: String,
     ) -> Result<Vec<model::Check>, Error>;
+    async fn find_items_by_check_list_id(
+        &self,
+        check_list_id: String,
+    ) -> Result<Vec<model::Item>, Error>;
 }
 
 pub trait HasStore {
