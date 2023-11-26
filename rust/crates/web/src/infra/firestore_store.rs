@@ -114,6 +114,19 @@ impl Store for FirestoreStore {
             .filter(|check| check.check_list_id == check_list_id)
             .collect())
     }
+
+    async fn find_checks_by_item_id(
+        &self,
+        item_id: String,
+    ) -> Result<Vec<model::Check>, use_case::Error> {
+        // TODO: improve perfomance
+        Ok(self
+            .find_all_checks()
+            .await?
+            .into_iter()
+            .filter(|check| check.item_id == item_id)
+            .collect())
+    }
 }
 
 #[cfg(test)]
