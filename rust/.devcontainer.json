@@ -16,8 +16,6 @@
   },
   "dockerComposeFile": "../compose.yaml",
   "name": "kireta_workspace",
-  // "service": "android",
-  // "workspaceFolder": "/home/node"
   "service": "rust",
   "workspaceFolder": "/rust"
 }
