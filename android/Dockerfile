@@ -1,4 +1,4 @@
-FROM node:18.18.2-bookworm
+FROM node:20.9.0-bookworm
 RUN usermod --home /home/bouzuya --login bouzuya node && \
   mkdir -p /home/bouzuya/kireta
 WORKDIR /home/bouzuya/kireta
