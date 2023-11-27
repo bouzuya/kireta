@@ -6,7 +6,7 @@ services:
       - "19000:19000"
     tty: true
     volumes:
-      - .:/home/node
+      - .:/home/bouzuya/kireta
   firebase:
     build: ./firebase/
     tty: true

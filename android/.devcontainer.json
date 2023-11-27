@@ -14,7 +14,7 @@
     }
   },
   "dockerComposeFile": "../compose.yaml",
-  "name": "kireta_workspace",
+  "name": "android",
   "service": "android",
-  "workspaceFolder": "/home/node"
+  "workspaceFolder": "/home/bouzuya/kireta"
 }
