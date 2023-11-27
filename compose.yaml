@@ -19,4 +19,4 @@ services:
       - "3000:3000"
     tty: true
     volumes:
-      - ./rust:/rust
+      - .:/home/bouzuya/kireta

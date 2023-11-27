@@ -3,19 +3,13 @@
     "vscode": {
       "extensions": [
         "GitHub.copilot",
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
         "ms-azuretools.vscode-docker",
         "rust-lang.rust-analyzer"
-      ],
-      "settings": {
-        "prettier.trailingComma": "all",
-        "typescript.preferences.importModuleSpecifier": "non-relative"
-      }
+      ]
     }
   },
   "dockerComposeFile": "../compose.yaml",
-  "name": "kireta_workspace",
+  "name": "rust",
   "service": "rust",
-  "workspaceFolder": "/rust"
+  "workspaceFolder": "/home/bouzuya/kireta"
 }

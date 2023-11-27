@@ -1,7 +1,8 @@
 FROM rust:1.73.0-bookworm
 
 ENV CARGO_BUILD_TARGET_DIR=/tmp/target
-WORKDIR /rust
+RUN useradd --create-home bouzuya \
+  && mkdir -p /home/bouzuya/kireta
 RUN apt-get update && apt-get install -y \
   jq \
   mold \
@@ -12,3 +13,4 @@ RUN rustup component add \
   rustfmt
 RUN cargo install \
   cargo-watch
+WORKDIR /home/bouzuya/kireta
