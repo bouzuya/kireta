@@ -55,7 +55,7 @@ mod tests {
         // READ (LIST)
         let (documents, next_page_token) = client.list::<V>(&collection_path).await?;
         assert_eq!(documents, vec![got.clone()]);
-        assert_eq!(next_page_token, "");
+        assert_eq!(next_page_token, None);
 
         // UPDATE
         let updated: Document<V> = client
