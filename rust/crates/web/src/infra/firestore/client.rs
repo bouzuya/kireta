@@ -271,7 +271,7 @@ impl Client {
             .map(|documents| {
                 (
                     documents,
-                    next_page_token.is_empty().then_some(next_page_token),
+                    (!next_page_token.is_empty()).then_some(next_page_token),
                 )
             })
     }
