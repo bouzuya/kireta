@@ -4,6 +4,9 @@ service cloud.firestore {
     match /check_lists/{check_list_id} {
       allow read, write: if true;
     }
+    match /items/{item_id} {
+      allow read, write: if true;
+    }
 
     match /repositories/{repository_id} {
       allow read, write: if true;

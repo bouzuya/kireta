@@ -169,4 +169,39 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_find_all_items() -> anyhow::Result<()> {
+        let endpoint = "http://firebase:8080";
+        let mut client = Client::new(
+            "demo-project1".to_string(),
+            "(default)".to_string(),
+            endpoint,
+        )
+        .await?;
+        let collection = client.collection("items")?;
+        let doc = collection.doc("1")?;
+
+        let input = ItemDocumentData {
+            id: "1".to_string(),
+            name: "name1".to_string(),
+        };
+        let created: Document<ItemDocumentData> = client.create(&doc, input).await?;
+
+        let store = FirestoreStore {
+            client: Arc::new(tokio::sync::Mutex::new(client.clone())),
+        };
+        let found = store.find_all_items().await?;
+        assert_eq!(
+            found,
+            vec![Item {
+                id: "1".to_string(),
+                name: "name1".to_string()
+            }]
+        );
+
+        client.delete(&doc, created.update_time()).await?;
+
+        Ok(())
+    }
 }
