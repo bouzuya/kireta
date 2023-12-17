@@ -1,4 +1,4 @@
-use crate::{DatabaseName, DocumentPath};
+use crate::{CollectionName, DatabaseName, DocumentPath};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -24,6 +24,13 @@ impl DocumentName {
             database_name,
             document_path,
         }
+    }
+
+    pub fn collection(self, collection_id: &str) -> Result<CollectionName, Error> {
+        Ok(CollectionName::new(
+            self.database_name,
+            self.document_path.collection(collection_id)?,
+        ))
     }
 }
 
@@ -67,6 +74,31 @@ mod tests {
         let s = "projects/my-project/databases/my-database/documents/chatrooms/chatroom1";
         let document_name = DocumentName::from_str(s)?;
         assert_eq!(document_name.to_string(), s);
+        Ok(())
+    }
+
+    #[test]
+    fn test_collection() -> anyhow::Result<()> {
+        let document_name = DocumentName::from_str(
+            "projects/my-project/databases/my-database/documents/chatrooms/chatroom1",
+        )?;
+        let collection_name = document_name.collection("messages")?;
+        assert_eq!(
+            collection_name,
+            CollectionName::from_str(
+                "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages"
+            )?
+        );
+        let document_name = DocumentName::from_str(
+            "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages/message1",
+        )?;
+        let collection_name = document_name.collection("col")?;
+        assert_eq!(
+            collection_name,
+            CollectionName::from_str(
+                "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages/message1/col"
+            )?
+        );
         Ok(())
     }
 

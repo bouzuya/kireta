@@ -1,7 +1,11 @@
-use crate::{CollectionPath, DocumentId};
+use std::str::FromStr;
+
+use crate::{CollectionId, CollectionPath, DocumentId};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("collection id {0}")]
+    CollectionId(#[from] Box<crate::collection_id::Error>),
     #[error("collection path {0}")]
     CollectionPath(#[from] Box<crate::collection_path::Error>),
     #[error("document id {0}")]
@@ -23,6 +27,12 @@ impl DocumentPath {
             collection_path: Box::new(collection_path),
             document_id,
         }
+    }
+
+    pub fn collection(self, collection_id: &str) -> Result<CollectionPath, Error> {
+        let collection_id = CollectionId::from_str(collection_id).map_err(Box::new)?;
+        let collection_path = CollectionPath::new(Some(self), collection_id);
+        Ok(collection_path)
     }
 }
 
@@ -65,6 +75,23 @@ mod tests {
         let s = "chatrooms/chatroom1/messages/message1";
         let document_path = DocumentPath::from_str(s)?;
         assert_eq!(document_path.to_string(), s);
+        Ok(())
+    }
+
+    #[test]
+    fn test_collection() -> anyhow::Result<()> {
+        let document_path = DocumentPath::from_str("chatrooms/chatroom1")?;
+        let collection_path = document_path.collection("messages")?;
+        assert_eq!(
+            collection_path,
+            CollectionPath::from_str("chatrooms/chatroom1/messages")?
+        );
+        let document_path = DocumentPath::from_str("chatrooms/chatroom1/messages/message1")?;
+        let collection_path = document_path.collection("col")?;
+        assert_eq!(
+            collection_path,
+            CollectionPath::from_str("chatrooms/chatroom1/messages/message1/col")?
+        );
         Ok(())
     }
 

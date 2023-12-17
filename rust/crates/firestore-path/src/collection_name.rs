@@ -1,4 +1,6 @@
-use crate::{CollectionPath, DatabaseName};
+use std::str::FromStr;
+
+use crate::{CollectionPath, DatabaseName, DocumentId, DocumentName, DocumentPath};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -6,6 +8,8 @@ pub enum Error {
     CollectionPath(#[from] crate::collection_path::Error),
     #[error("database name {0}")]
     DatabaseName(#[from] crate::database_name::Error),
+    #[error("document id {0}")]
+    DocumentId(#[from] crate::document_id::Error),
     #[error("todo")]
     ToDo,
 }
@@ -24,6 +28,13 @@ impl CollectionName {
             collection_path,
             database_name,
         }
+    }
+
+    pub fn doc(self, document_id: &str) -> Result<DocumentName, Error> {
+        let document_id = DocumentId::from_str(document_id)?;
+        let document_path = DocumentPath::new(self.collection_path, document_id);
+        let document_name = DocumentName::new(self.database_name, document_path);
+        Ok(document_name)
     }
 }
 
@@ -65,12 +76,38 @@ mod tests {
     #[test]
     fn test() -> anyhow::Result<()> {
         let s = "projects/my-project/databases/my-database/documents/chatrooms";
-        let collection_path = CollectionName::from_str(s)?;
-        assert_eq!(collection_path.to_string(), s);
+        let collection_name = CollectionName::from_str(s)?;
+        assert_eq!(collection_name.to_string(), s);
 
         let s = "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages";
-        let collection_path = CollectionName::from_str(s)?;
-        assert_eq!(collection_path.to_string(), s);
+        let collection_name = CollectionName::from_str(s)?;
+        assert_eq!(collection_name.to_string(), s);
+        Ok(())
+    }
+
+    #[test]
+    fn test_doc() -> anyhow::Result<()> {
+        let collection_name = CollectionName::from_str(
+            "projects/my-project/databases/my-database/documents/chatrooms",
+        )?;
+        let document_name = collection_name.doc("chatroom1")?;
+        assert_eq!(
+            document_name,
+            DocumentName::from_str(
+                "projects/my-project/databases/my-database/documents/chatrooms/chatroom1"
+            )?
+        );
+
+        let collection_name = CollectionName::from_str(
+            "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages",
+        )?;
+        let document_name = collection_name.doc("message1")?;
+        assert_eq!(
+            document_name,
+            DocumentName::from_str(
+                "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages/message1"
+            )?
+        );
         Ok(())
     }
 

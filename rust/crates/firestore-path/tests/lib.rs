@@ -6,6 +6,45 @@ use firestore_path::{
 };
 
 #[test]
+fn test_building_structs_using_collection_and_doc_helpers() -> anyhow::Result<()> {
+    let project_id = ProjectId::from_str("my-project")?;
+    let database_id = DatabaseId::from_str("my-database")?;
+    let database_name = DatabaseName::new(project_id, database_id);
+    let collection_name = database_name.collection("chatrooms")?;
+    assert_eq!(
+        collection_name.to_string(),
+        "projects/my-project/databases/my-database/documents/chatrooms"
+    );
+    let document_name = collection_name.doc("chatroom1")?;
+    assert_eq!(
+        document_name.to_string(),
+        "projects/my-project/databases/my-database/documents/chatrooms/chatroom1"
+    );
+    let collection_name = document_name.collection("messages")?;
+    assert_eq!(
+        collection_name.to_string(),
+        "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages"
+    );
+    let document_name = collection_name.doc("message1")?;
+    assert_eq!(
+        document_name.to_string(),
+        "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages/message1"
+    );
+    let collection_path = CollectionPath::from_str("chatrooms")?;
+    assert_eq!(collection_path.to_string(), "chatrooms");
+    let document_path = collection_path.doc("chatroom1")?;
+    assert_eq!(document_path.to_string(), "chatrooms/chatroom1");
+    let collection_path = document_path.collection("messages")?;
+    assert_eq!(collection_path.to_string(), "chatrooms/chatroom1/messages");
+    let document_path = collection_path.doc("message1")?;
+    assert_eq!(
+        document_path.to_string(),
+        "chatrooms/chatroom1/messages/message1"
+    );
+    Ok(())
+}
+
+#[test]
 fn test_building_structs_using_new_constructor() -> anyhow::Result<()> {
     let project_id = ProjectId::from_str("my-project")?;
     let database_id = DatabaseId::from_str("my-database")?;
