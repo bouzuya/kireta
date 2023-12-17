@@ -44,6 +44,16 @@ impl DocumentPath {
     pub fn document_id(&self) -> &DocumentId {
         &self.document_id
     }
+
+    pub fn parent(&self) -> &CollectionPath {
+        self.collection_path.as_ref()
+    }
+}
+
+impl std::convert::From<DocumentPath> for CollectionPath {
+    fn from(document_path: DocumentPath) -> Self {
+        *document_path.collection_path
+    }
 }
 
 impl std::convert::From<DocumentPath> for DocumentId {
@@ -147,6 +157,21 @@ mod tests {
     }
 
     #[test]
+    fn test_impl_from_document_path_for_collection_path() -> anyhow::Result<()> {
+        let document_path = DocumentPath::from_str("chatrooms/chatroom1")?;
+        assert_eq!(
+            CollectionPath::from(document_path),
+            CollectionPath::from_str("chatrooms")?
+        );
+        let document_path = DocumentPath::from_str("chatrooms/chatroom1/messages/message1")?;
+        assert_eq!(
+            CollectionPath::from(document_path),
+            CollectionPath::from_str("chatrooms/chatroom1/messages")?
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_impl_from_document_path_for_document_id() -> anyhow::Result<()> {
         let document_path = DocumentPath::from_str("chatrooms/chatroom1")?;
         assert_eq!(
@@ -186,6 +211,21 @@ mod tests {
         assert_eq!(
             document_path.to_string(),
             format!("{}/{}", collection_path, document_id)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_parent() -> anyhow::Result<()> {
+        let document_path = DocumentPath::from_str("chatrooms/chatroom1")?;
+        assert_eq!(
+            document_path.parent(),
+            &CollectionPath::from_str("chatrooms")?
+        );
+        let document_path = DocumentPath::from_str("chatrooms/chatroom1/messages/message1")?;
+        assert_eq!(
+            document_path.parent(),
+            &CollectionPath::from_str("chatrooms/chatroom1/messages")?
         );
         Ok(())
     }
