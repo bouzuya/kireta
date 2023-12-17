@@ -46,6 +46,11 @@ impl CollectionName {
         let document_name = DocumentName::new(self.database_name, document_path);
         Ok(document_name)
     }
+
+    pub fn parent(self) -> Option<DocumentName> {
+        Option::<DocumentPath>::from(self.collection_path)
+            .map(|document_path| DocumentName::new(self.database_name, document_path))
+    }
 }
 
 impl std::convert::From<CollectionName> for CollectionId {
@@ -231,6 +236,23 @@ mod tests {
         assert_eq!(
             collection_name.to_string(),
             format!("{}/{}", database_name, collection_path)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_parent() -> anyhow::Result<()> {
+        let s = "projects/my-project/databases/my-database/documents/chatrooms";
+        let collection_name = CollectionName::from_str(s)?;
+        assert_eq!(collection_name.parent(), None);
+
+        let s = "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages";
+        let collection_name = CollectionName::from_str(s)?;
+        assert_eq!(
+            collection_name.parent(),
+            Some(DocumentName::from_str(
+                "projects/my-project/databases/my-database/documents/chatrooms/chatroom1"
+            )?)
         );
         Ok(())
     }
