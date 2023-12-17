@@ -32,6 +32,10 @@ impl CollectionPath {
         }
     }
 
+    pub fn collection_id(&self) -> &CollectionId {
+        &self.collection_id
+    }
+
     pub fn doc<E, T>(self, document_id: T) -> Result<DocumentPath, Error>
     where
         E: std::fmt::Display,
@@ -42,6 +46,12 @@ impl CollectionPath {
             .map_err(|e| Error::DocumentId(e.to_string()))?;
         let document_path = DocumentPath::new(self, document_id);
         Ok(document_path)
+    }
+}
+
+impl std::convert::From<CollectionPath> for CollectionId {
+    fn from(collection_path: CollectionPath) -> Self {
+        collection_path.collection_id
     }
 }
 
@@ -106,6 +116,16 @@ mod tests {
     }
 
     #[test]
+    fn test_collection_id() -> anyhow::Result<()> {
+        let collection_path = CollectionPath::from_str("chatrooms")?;
+        assert_eq!(
+            collection_path.collection_id(),
+            &CollectionId::from_str("chatrooms")?
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_doc() -> anyhow::Result<()> {
         let collection_path = CollectionPath::from_str("chatrooms")?;
         let document_path = collection_path.doc("chatroom1")?;
@@ -129,6 +149,16 @@ mod tests {
             DocumentPath::from_str("chatrooms/chatroom1")?
         );
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_impl_from_collection_path_for_collection_id() -> anyhow::Result<()> {
+        let collection_path = CollectionPath::from_str("chatrooms")?;
+        assert_eq!(
+            CollectionId::from(collection_path),
+            CollectionId::from_str("chatrooms")?
+        );
         Ok(())
     }
 
