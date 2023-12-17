@@ -1,9 +1,62 @@
 use std::str::FromStr;
 
+use anyhow::Context;
 use firestore_path::{
     CollectionId, CollectionName, CollectionPath, DatabaseId, DatabaseName, DocumentId,
     DocumentName, DocumentPath, ProjectId,
 };
+
+#[test]
+fn test_collection_id_document_id_and_parent() -> anyhow::Result<()> {
+    let document_name = DocumentName::from_str(
+        "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages/message1",
+    )?;
+    assert_eq!(
+        document_name.document_id(),
+        &DocumentId::from_str("message1")?
+    );
+    let collection_name = document_name.parent();
+    assert_eq!(
+        collection_name.collection_id(),
+        &CollectionId::from_str("messages")?
+    );
+    let document_name = collection_name
+        .parent()
+        .context("subcollection should have parent")?;
+    assert_eq!(
+        document_name.document_id(),
+        &DocumentId::from_str("chatroom1")?
+    );
+    let collection_name = document_name.parent();
+    assert_eq!(
+        collection_name.collection_id(),
+        &CollectionId::from_str("chatrooms")?
+    );
+
+    let document_path = DocumentPath::from_str("chatrooms/chatroom1/messages/message1")?;
+    assert_eq!(
+        document_path.document_id(),
+        &DocumentId::from_str("message1")?
+    );
+    let collection_path = document_path.parent();
+    assert_eq!(
+        collection_path.collection_id(),
+        &CollectionId::from_str("messages")?
+    );
+    let document_path = collection_path
+        .parent()
+        .context("subcollection should have parent")?;
+    assert_eq!(
+        document_path.document_id(),
+        &DocumentId::from_str("chatroom1")?
+    );
+    let collection_path = document_path.parent();
+    assert_eq!(
+        collection_path.collection_id(),
+        &CollectionId::from_str("chatrooms")?
+    );
+    Ok(())
+}
 
 #[test]
 fn test_building_structs_using_collection_and_doc_helpers() -> anyhow::Result<()> {
