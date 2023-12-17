@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::{CollectionPath, DatabaseName, DocumentId, DocumentName, DocumentPath};
+use crate::{CollectionId, CollectionPath, DatabaseName, DocumentId, DocumentName, DocumentPath};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -30,6 +30,10 @@ impl CollectionName {
         }
     }
 
+    pub fn collection_id(&self) -> &CollectionId {
+        self.collection_path.collection_id()
+    }
+
     pub fn doc<E, T>(self, document_id: T) -> Result<DocumentName, Error>
     where
         E: std::fmt::Display,
@@ -41,6 +45,12 @@ impl CollectionName {
         let document_path = DocumentPath::new(self.collection_path, document_id);
         let document_name = DocumentName::new(self.database_name, document_path);
         Ok(document_name)
+    }
+}
+
+impl std::convert::From<CollectionName> for CollectionId {
+    fn from(collection_name: CollectionName) -> Self {
+        Self::from(collection_name.collection_path)
     }
 }
 
@@ -108,6 +118,17 @@ mod tests {
     }
 
     #[test]
+    fn test_collection_id() -> anyhow::Result<()> {
+        let s = "projects/my-project/databases/my-database/documents/chatrooms";
+        let collection_name = CollectionName::from_str(s)?;
+        assert_eq!(
+            collection_name.collection_id(),
+            &CollectionId::from_str("chatrooms")?
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_doc() -> anyhow::Result<()> {
         let collection_name = CollectionName::from_str(
             "projects/my-project/databases/my-database/documents/chatrooms",
@@ -143,6 +164,17 @@ mod tests {
             )?
         );
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_impl_from_collection_name_for_collection_id() -> anyhow::Result<()> {
+        let s = "projects/my-project/databases/my-database/documents/chatrooms";
+        let collection_name = CollectionName::from_str(s)?;
+        assert_eq!(
+            CollectionId::from(collection_name),
+            CollectionId::from_str("chatrooms")?
+        );
         Ok(())
     }
 
