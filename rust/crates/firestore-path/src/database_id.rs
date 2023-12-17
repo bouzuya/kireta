@@ -7,6 +7,12 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DatabaseId(String);
 
+impl std::convert::AsRef<str> for DatabaseId {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
 impl std::convert::TryFrom<&str> for DatabaseId {
     type Error = Error;
 
@@ -78,6 +84,8 @@ mod tests {
         let s = "(default)";
         let database_id = DatabaseId::from_str(s)?;
         assert_eq!(database_id.to_string(), s);
+
+        assert_eq!(database_id.as_ref(), s);
         Ok(())
     }
 

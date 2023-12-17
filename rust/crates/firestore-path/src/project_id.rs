@@ -7,6 +7,12 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ProjectId(String);
 
+impl std::convert::AsRef<str> for ProjectId {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
 impl std::convert::TryFrom<&str> for ProjectId {
     type Error = Error;
 
@@ -79,6 +85,8 @@ mod tests {
         let s = "my-project";
         let project_id = ProjectId::from_str(s)?;
         assert_eq!(project_id.to_string(), s);
+
+        assert_eq!(project_id.as_ref(), s);
         Ok(())
     }
 

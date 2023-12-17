@@ -8,6 +8,12 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct CollectionId(String);
 
+impl std::convert::AsRef<str> for CollectionId {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
 impl std::convert::TryFrom<&str> for CollectionId {
     type Error = Error;
 
@@ -66,6 +72,8 @@ mod tests {
         let s = "messages";
         let collection_id = CollectionId::from_str(s)?;
         assert_eq!(collection_id.to_string(), s);
+
+        assert_eq!(collection_id.as_ref(), s);
         Ok(())
     }
 

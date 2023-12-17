@@ -7,6 +7,12 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DocumentId(String);
 
+impl std::convert::AsRef<str> for DocumentId {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
 impl std::convert::TryFrom<&str> for DocumentId {
     type Error = Error;
 
@@ -67,6 +73,8 @@ mod tests {
         let s = "chatroom1";
         let document_id = DocumentId::from_str(s)?;
         assert_eq!(document_id.to_string(), s);
+
+        assert_eq!(document_id.as_ref(), s);
         Ok(())
     }
 
