@@ -39,6 +39,23 @@ impl CollectionPath {
     }
 }
 
+impl std::convert::TryFrom<String> for CollectionPath {
+    type Error = Error;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        Ok(match s.rsplit_once('/') {
+            Some((document_path, collection_id)) => Self {
+                document_path: Some(DocumentPath::from_str(document_path)?),
+                collection_id: CollectionId::from_str(collection_id)?,
+            },
+            None => Self {
+                document_path: None,
+                collection_id: CollectionId::try_from(s)?,
+            },
+        })
+    }
+}
+
 impl std::fmt::Display for CollectionPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.document_path.as_ref() {
@@ -52,16 +69,7 @@ impl std::str::FromStr for CollectionPath {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s.rsplit_once('/') {
-            Some((document_path, collection_id)) => Self {
-                document_path: Some(DocumentPath::from_str(document_path)?),
-                collection_id: CollectionId::from_str(collection_id)?,
-            },
-            None => Self {
-                document_path: None,
-                collection_id: CollectionId::from_str(s)?,
-            },
-        })
+        CollectionPath::try_from(s.to_string())
     }
 }
 
@@ -102,14 +110,18 @@ mod tests {
     }
 
     #[test]
-    fn test_impl_from_str() -> anyhow::Result<()> {
-        let s = "chatrooms";
-        let collection_path = CollectionPath::from_str(s)?;
-        assert_eq!(collection_path.to_string(), s);
-
-        let s = "chatrooms/chatroom1/messages";
-        let collection_path = CollectionPath::from_str(s)?;
-        assert_eq!(collection_path.to_string(), s);
+    fn test_impl_from_str_and_impl_try_from_string() -> anyhow::Result<()> {
+        for (s, expected) in [("chatrooms", true), ("chatrooms/chatroom1/messages", true)] {
+            assert_eq!(CollectionPath::from_str(s).is_ok(), expected);
+            assert_eq!(CollectionPath::try_from(s.to_string()).is_ok(), expected);
+            if expected {
+                assert_eq!(
+                    CollectionPath::from_str(s)?,
+                    CollectionPath::try_from(s.to_string())?
+                );
+                assert_eq!(CollectionPath::from_str(s)?.to_string(), s);
+            }
+        }
         Ok(())
     }
 

@@ -7,16 +7,10 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DatabaseId(String);
 
-impl std::fmt::Display for DatabaseId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
+impl std::convert::TryFrom<String> for DatabaseId {
+    type Error = Error;
 
-impl std::str::FromStr for DatabaseId {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn try_from(s: String) -> Result<Self, Self::Error> {
         // <https://firebase.google.com/docs/firestore/reference/rest/v1/projects.databases/create#query-parameters>
         if s == "(default)" {
             return Ok(Self(s.to_string()));
@@ -43,7 +37,21 @@ impl std::str::FromStr for DatabaseId {
             return Err(Error::ToDo);
         }
 
-        Ok(Self(s.to_string()))
+        Ok(Self(s))
+    }
+}
+
+impl std::fmt::Display for DatabaseId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl std::str::FromStr for DatabaseId {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        DatabaseId::try_from(s.to_string())
     }
 }
 
@@ -67,18 +75,30 @@ mod tests {
 
     #[test]
     fn test_impl_from_str() -> anyhow::Result<()> {
-        assert!(DatabaseId::from_str("(default)").is_ok());
-        assert!(DatabaseId::from_str("(default1)").is_err());
-        assert!(DatabaseId::from_str(&"x".repeat(3)).is_err());
-        assert!(DatabaseId::from_str(&"x".repeat(4)).is_ok());
-        assert!(DatabaseId::from_str(&"x".repeat(63)).is_ok());
-        assert!(DatabaseId::from_str(&"x".repeat(64)).is_err());
-        assert!(DatabaseId::from_str("x1-x").is_ok());
-        assert!(DatabaseId::from_str("xAxx").is_err());
-        assert!(DatabaseId::from_str("-xxx").is_err());
-        assert!(DatabaseId::from_str("0xxx").is_err());
-        assert!(DatabaseId::from_str("xxx-").is_err());
-        assert!(DatabaseId::from_str("xxx0").is_ok());
+        for (s, expected) in [
+            ("(default)", true),
+            ("(default1)", false),
+            ("x".repeat(3).as_str(), false),
+            ("x".repeat(4).as_str(), true),
+            ("x".repeat(63).as_str(), true),
+            ("x".repeat(64).as_str(), false),
+            ("x1-x", true),
+            ("xAxx", false),
+            ("-xxx", false),
+            ("0xxx", false),
+            ("xxx-", false),
+            ("xxx0", true),
+        ] {
+            assert_eq!(DatabaseId::from_str(s).is_ok(), expected);
+            assert_eq!(DatabaseId::try_from(s.to_string()).is_ok(), expected);
+            if expected {
+                assert_eq!(
+                    DatabaseId::from_str(s)?,
+                    DatabaseId::try_from(s.to_string())?
+                );
+                assert_eq!(DatabaseId::from_str(s)?.to_string(), s);
+            }
+        }
         Ok(())
     }
 }

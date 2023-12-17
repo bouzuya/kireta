@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::{CollectionName, DatabaseName, DocumentPath};
 
 #[derive(Debug, thiserror::Error)]
@@ -31,6 +33,14 @@ impl DocumentName {
             self.database_name,
             self.document_path.collection(collection_id)?,
         ))
+    }
+}
+
+impl std::convert::TryFrom<String> for DocumentName {
+    type Error = Error;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        DocumentName::from_str(s.as_str())
     }
 }
 
@@ -103,27 +113,7 @@ mod tests {
     }
 
     #[test]
-    fn test_impl_from_str() -> anyhow::Result<()> {
-        assert!(
-            DocumentName::from_str("projects/my-project/databases/my-database/documents").is_err()
-        );
-        assert!(
-            DocumentName::from_str("projects/my-project/databases/my-database/documents/c")
-                .is_err()
-        );
-        assert!(
-            DocumentName::from_str("projects/my-project/databases/my-database/documents/c/d")
-                .is_ok()
-        );
-        assert!(DocumentName::from_str(
-            "projects/my-project/databases/my-database/documents/c/d/c"
-        )
-        .is_err());
-        assert!(DocumentName::from_str(
-            "projects/my-project/databases/my-database/documents/c/d/c/d"
-        )
-        .is_ok());
-
+    fn test_impl_from_str_and_impl_try_from_string() -> anyhow::Result<()> {
         let b = "projects/my-project/databases/my-database/documents";
         let c1 = "x".repeat(1500);
         let d1 = "x".repeat(1500);
@@ -132,12 +122,42 @@ mod tests {
         let c3 = "z".repeat(80);
         let d3_ok = "z".repeat(7);
         let d3_err = "z".repeat(7 + 1);
-        let s = format!("{}/{}/{}/{}/{}/{}/{}", b, c1, d1, c2, d2, c3, d3_ok);
-        assert_eq!(s.len(), 6_144);
-        assert!(DocumentName::from_str(&s).is_ok());
-        let s = format!("{}/{}/{}/{}/{}/{}/{}", b, c1, d1, c2, d2, c3, d3_err);
-        assert_eq!(s.len(), 6_145);
-        assert!(DocumentName::from_str(&s).is_err());
+        let s1 = format!("{}/{}/{}/{}/{}/{}/{}", b, c1, d1, c2, d2, c3, d3_ok);
+        assert_eq!(s1.len(), 6_144);
+        let s2 = format!("{}/{}/{}/{}/{}/{}/{}", b, c1, d1, c2, d2, c3, d3_err);
+        assert_eq!(s2.len(), 6_145);
+
+        for (s, expected) in [
+            ("projects/my-project/databases/my-database/documents", false),
+            (
+                "projects/my-project/databases/my-database/documents/c",
+                false,
+            ),
+            (
+                "projects/my-project/databases/my-database/documents/c/d",
+                true,
+            ),
+            (
+                "projects/my-project/databases/my-database/documents/c/d/c",
+                false,
+            ),
+            (
+                "projects/my-project/databases/my-database/documents/c/d/c/d",
+                true,
+            ),
+            (s1.as_ref(), true),
+            (s2.as_ref(), false),
+        ] {
+            assert_eq!(DocumentName::from_str(s).is_ok(), expected);
+            assert_eq!(DocumentName::try_from(s.to_string()).is_ok(), expected);
+            if expected {
+                assert_eq!(
+                    DocumentName::from_str(s)?,
+                    DocumentName::try_from(s.to_string())?
+                );
+                assert_eq!(DocumentName::from_str(s)?.to_string(), s);
+            }
+        }
         Ok(())
     }
 

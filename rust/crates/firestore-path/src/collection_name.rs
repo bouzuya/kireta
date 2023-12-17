@@ -38,6 +38,14 @@ impl CollectionName {
     }
 }
 
+impl std::convert::TryFrom<String> for CollectionName {
+    type Error = Error;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        CollectionName::from_str(s.as_str())
+    }
+}
+
 impl std::fmt::Display for CollectionName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}/{}", self.database_name, self.collection_path)
@@ -112,24 +120,7 @@ mod tests {
     }
 
     #[test]
-    fn test_impl_from_str() -> anyhow::Result<()> {
-        assert!(
-            CollectionName::from_str("projects/my-project/databases/my-database/documents")
-                .is_err()
-        );
-        assert!(
-            CollectionName::from_str("projects/my-project/databases/my-database/documents/c")
-                .is_ok()
-        );
-        assert!(CollectionName::from_str(
-            "projects/my-project/databases/my-database/documents/c/d"
-        )
-        .is_err());
-        assert!(CollectionName::from_str(
-            "projects/my-project/databases/my-database/documents/c/d/c"
-        )
-        .is_ok());
-
+    fn test_impl_from_str_and_impl_try_from_string() -> anyhow::Result<()> {
         let b = "projects/my-project/databases/my-database/documents";
         let c1 = "x".repeat(1500);
         let d1 = "x".repeat(1500);
@@ -137,12 +128,37 @@ mod tests {
         let d2 = "y".repeat(1500);
         let c3_ok = "z".repeat(88);
         let c3_err = "z".repeat(88 + 1);
-        let s = format!("{}/{}/{}/{}/{}/{}", b, c1, d1, c2, d2, c3_ok);
-        assert_eq!(s.len(), 6_144);
-        assert!(CollectionName::from_str(&s).is_ok());
-        let s = format!("{}/{}/{}/{}/{}/{}", b, c1, d1, c2, d2, c3_err);
-        assert_eq!(s.len(), 6_145);
-        assert!(CollectionName::from_str(&s).is_err());
+        let s1 = format!("{}/{}/{}/{}/{}/{}", b, c1, d1, c2, d2, c3_ok);
+        assert_eq!(s1.len(), 6_144);
+        let s2 = format!("{}/{}/{}/{}/{}/{}", b, c1, d1, c2, d2, c3_err);
+        assert_eq!(s2.len(), 6_145);
+        for (s, expected) in [
+            ("projects/my-project/databases/my-database/documents", false),
+            (
+                "projects/my-project/databases/my-database/documents/c",
+                true,
+            ),
+            (
+                "projects/my-project/databases/my-database/documents/c/d",
+                false,
+            ),
+            (
+                "projects/my-project/databases/my-database/documents/c/d/c",
+                true,
+            ),
+            (s1.as_str(), true),
+            (s2.as_str(), false),
+        ] {
+            assert_eq!(CollectionName::from_str(s).is_ok(), expected);
+            assert_eq!(CollectionName::try_from(s.to_string()).is_ok(), expected);
+            if expected {
+                assert_eq!(
+                    CollectionName::from_str(s)?,
+                    CollectionName::try_from(s.to_string())?
+                );
+                assert_eq!(CollectionName::from_str(s)?.to_string(), s);
+            }
+        }
         Ok(())
     }
 

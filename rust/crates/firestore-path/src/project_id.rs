@@ -7,16 +7,10 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ProjectId(String);
 
-impl std::fmt::Display for ProjectId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
+impl std::convert::TryFrom<String> for ProjectId {
+    type Error = Error;
 
-impl std::str::FromStr for ProjectId {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn try_from(s: String) -> Result<Self, Self::Error> {
         // <https://cloud.google.com/resource-manager/docs/creating-managing-projects>
 
         if !(6..=30).contains(&s.len()) {
@@ -48,7 +42,21 @@ impl std::str::FromStr for ProjectId {
             return Err(Error::ToDo);
         }
 
-        Ok(Self(s.to_string()))
+        Ok(Self(s))
+    }
+}
+
+impl std::fmt::Display for ProjectId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl std::str::FromStr for ProjectId {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        ProjectId::try_from(s.to_string())
     }
 }
 
@@ -67,23 +75,32 @@ mod tests {
     }
 
     #[test]
-    fn test_impl_from_str() -> anyhow::Result<()> {
-        assert!(ProjectId::from_str(&"x".repeat(5)).is_err());
-        assert!(ProjectId::from_str(&"x".repeat(6)).is_ok());
-        assert!(ProjectId::from_str(&"x".repeat(30)).is_ok());
-        assert!(ProjectId::from_str(&"x".repeat(31)).is_err());
-        assert!(ProjectId::from_str("chat/rooms").is_err());
-        assert!(ProjectId::from_str("xxxxxx").is_ok());
-        assert!(ProjectId::from_str("x-xxxx").is_ok());
-        assert!(ProjectId::from_str("x0xxxx").is_ok());
-        assert!(ProjectId::from_str("xAxxxx").is_err());
-        assert!(ProjectId::from_str("0xxxxx").is_err());
-        assert!(ProjectId::from_str("xxxxx0").is_ok());
-        assert!(ProjectId::from_str("xxxxx-").is_err());
-        assert!(ProjectId::from_str("xgoogle").is_err());
-        assert!(ProjectId::from_str("xnull").is_err());
-        assert!(ProjectId::from_str("xundefined").is_err());
-        assert!(ProjectId::from_str("xssl").is_err());
+    fn test_impl_from_str_and_impl_try_from_string() -> anyhow::Result<()> {
+        for (s, expected) in [
+            ("x".repeat(5).as_ref(), false),
+            ("x".repeat(6).as_ref(), true),
+            ("x".repeat(30).as_ref(), true),
+            ("x".repeat(31).as_ref(), false),
+            ("chat/rooms", false),
+            ("xxxxxx", true),
+            ("x-xxxx", true),
+            ("x0xxxx", true),
+            ("xAxxxx", false),
+            ("0xxxxx", false),
+            ("xxxxx0", true),
+            ("xxxxx-", false),
+            ("xgoogle", false),
+            ("xnull", false),
+            ("xundefined", false),
+            ("xssl", false),
+        ] {
+            assert_eq!(ProjectId::from_str(s).is_ok(), expected);
+            assert_eq!(ProjectId::try_from(s.to_string()).is_ok(), expected);
+            if expected {
+                assert_eq!(ProjectId::from_str(s)?, ProjectId::try_from(s.to_string())?);
+                assert_eq!(ProjectId::from_str(s)?.to_string(), s);
+            }
+        }
         Ok(())
     }
 }

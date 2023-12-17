@@ -37,6 +37,14 @@ impl DatabaseName {
     }
 }
 
+impl std::convert::TryFrom<String> for DatabaseName {
+    type Error = Error;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        DatabaseName::from_str(s.as_str())
+    }
+}
+
 impl std::fmt::Display for DatabaseName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -102,16 +110,26 @@ mod tests {
     }
 
     #[test]
-    fn test_impl_from_str() -> anyhow::Result<()> {
-        let s = "projects/my-project/databases/my-database/documents";
-        let database_name = DatabaseName::from_str(s)?;
-        assert_eq!(database_name.to_string(), s);
-        assert!(DatabaseName::from_str(&"x".repeat(1024 * 6 + 1)).is_err());
-        assert!(DatabaseName::from_str("p/my-project/databases/my-database/documents").is_err());
-        assert!(DatabaseName::from_str("projects/my-project/d/my-database/documents").is_err());
-        assert!(DatabaseName::from_str("projects/my-project/databases/my-database/d").is_err());
-        assert!(DatabaseName::from_str("projects/P/databases/my-database/d").is_err());
-        assert!(DatabaseName::from_str("projects/my-project/databases/D/d").is_err());
+    fn test_impl_from_str_and_impl_try_from_string() -> anyhow::Result<()> {
+        for (s, expected) in [
+            ("projects/my-project/databases/my-database/documents", true),
+            ("x".repeat(1024 * 6 + 1).as_ref(), false),
+            ("p/my-project/databases/my-database/documents", false),
+            ("projects/my-project/d/my-database/documents", false),
+            ("projects/my-project/databases/my-database/d", false),
+            ("projects/P/databases/my-database/d", false),
+            ("projects/my-project/databases/D/d", false),
+        ] {
+            assert_eq!(DatabaseName::from_str(s).is_ok(), expected);
+            assert_eq!(DatabaseName::try_from(s.to_string()).is_ok(), expected);
+            if expected {
+                assert_eq!(
+                    DatabaseName::from_str(s)?,
+                    DatabaseName::try_from(s.to_string())?
+                );
+                assert_eq!(DatabaseName::from_str(s)?.to_string(), s);
+            }
+        }
         Ok(())
     }
 

@@ -36,6 +36,14 @@ impl DocumentPath {
     }
 }
 
+impl std::convert::TryFrom<String> for DocumentPath {
+    type Error = Error;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        DocumentPath::from_str(s.as_str())
+    }
+}
+
 impl std::fmt::Display for DocumentPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}/{}", self.collection_path, self.document_id)
@@ -96,17 +104,22 @@ mod tests {
     }
 
     #[test]
-    fn test_impl_from_str() -> anyhow::Result<()> {
-        let s = "chatrooms";
-        assert!(DocumentPath::from_str(s).is_err());
-
-        let s = "chatrooms/chatroom1";
-        let document_path = DocumentPath::from_str(s)?;
-        assert_eq!(document_path.to_string(), s);
-
-        let s = "chatrooms/chatroom1/messages/message1";
-        let document_path = DocumentPath::from_str(s)?;
-        assert_eq!(document_path.to_string(), s);
+    fn test_impl_from_str_and_impl_try_from_string() -> anyhow::Result<()> {
+        for (s, expected) in [
+            ("chatrooms", false),
+            ("chatrooms/chatroom1", true),
+            ("chatrooms/chatroom1/messages/message1", true),
+        ] {
+            assert_eq!(DocumentPath::from_str(s).is_ok(), expected);
+            assert_eq!(DocumentPath::try_from(s.to_string()).is_ok(), expected);
+            if expected {
+                assert_eq!(
+                    DocumentPath::from_str(s)?,
+                    DocumentPath::try_from(s.to_string())?
+                );
+                assert_eq!(DocumentPath::from_str(s)?.to_string(), s);
+            }
+        }
         Ok(())
     }
 

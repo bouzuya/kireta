@@ -8,16 +8,10 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct CollectionId(String);
 
-impl std::fmt::Display for CollectionId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
+impl std::convert::TryFrom<String> for CollectionId {
+    type Error = Error;
 
-impl std::str::FromStr for CollectionId {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn try_from(s: String) -> Result<Self, Self::Error> {
         // <https://firebase.google.com/docs/firestore/quotas#collections_documents_and_fields>
         if s.len() > 1500 {
             return Err(Error::ToDo);
@@ -31,7 +25,21 @@ impl std::str::FromStr for CollectionId {
         if s.starts_with("__") && s.ends_with("__") {
             return Err(Error::ToDo);
         }
-        Ok(Self(s.to_string()))
+        Ok(Self(s))
+    }
+}
+
+impl std::fmt::Display for CollectionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl std::str::FromStr for CollectionId {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        CollectionId::try_from(s.to_string())
     }
 }
 
@@ -54,17 +62,29 @@ mod tests {
     }
 
     #[test]
-    fn test_impl_from_str() -> anyhow::Result<()> {
-        assert!(CollectionId::from_str(&"x".repeat(1501)).is_err());
-        assert!(CollectionId::from_str(&"x".repeat(1500)).is_ok());
-        assert!(CollectionId::from_str("chat/rooms").is_err());
-        assert!(CollectionId::from_str(".").is_err());
-        assert!(CollectionId::from_str(".x").is_ok());
-        assert!(CollectionId::from_str("..").is_err());
-        assert!(CollectionId::from_str("..x").is_ok());
-        assert!(CollectionId::from_str("__x__").is_err());
-        assert!(CollectionId::from_str("__x").is_ok());
-        assert!(CollectionId::from_str("x__").is_ok());
+    fn test_impl_from_str_and_impl_try_from_string() -> anyhow::Result<()> {
+        for (s, expected) in [
+            ("x".repeat(1501).as_ref(), false),
+            ("x".repeat(1500).as_ref(), true),
+            ("chat/rooms", false),
+            (".", false),
+            (".x", true),
+            ("..", false),
+            ("..x", true),
+            ("__x__", false),
+            ("__x", true),
+            ("x__", true),
+        ] {
+            assert_eq!(CollectionId::from_str(s).is_ok(), expected);
+            assert_eq!(CollectionId::try_from(s.to_string()).is_ok(), expected);
+            if expected {
+                assert_eq!(
+                    CollectionId::from_str(s)?,
+                    CollectionId::try_from(s.to_string())?
+                );
+                assert_eq!(CollectionId::from_str(s)?.to_string(), s);
+            }
+        }
         Ok(())
     }
 }

@@ -7,16 +7,10 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DocumentId(String);
 
-impl std::fmt::Display for DocumentId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
+impl std::convert::TryFrom<String> for DocumentId {
+    type Error = Error;
 
-impl std::str::FromStr for DocumentId {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn try_from(s: String) -> Result<Self, Self::Error> {
         // <https://firebase.google.com/docs/firestore/quotas#collections_documents_and_fields>
         if s.len() > 1_500 {
             return Err(Error::ToDo);
@@ -36,7 +30,21 @@ impl std::str::FromStr for DocumentId {
 
         // TODO: Datastore entities
 
-        Ok(Self(s.to_string()))
+        Ok(Self(s))
+    }
+}
+
+impl std::fmt::Display for DocumentId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl std::str::FromStr for DocumentId {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        DocumentId::try_from(s.to_string())
     }
 }
 
@@ -55,18 +63,30 @@ mod tests {
     }
 
     #[test]
-    fn test_impl_from_str() -> anyhow::Result<()> {
-        assert!(DocumentId::from_str("chatroom1").is_ok());
-        assert!(DocumentId::from_str(&"x".repeat(1501)).is_err());
-        assert!(DocumentId::from_str(&"x".repeat(1500)).is_ok());
-        assert!(DocumentId::from_str("chat/room1").is_err());
-        assert!(DocumentId::from_str(".").is_err());
-        assert!(DocumentId::from_str(".x").is_ok());
-        assert!(DocumentId::from_str("..").is_err());
-        assert!(DocumentId::from_str("..x").is_ok());
-        assert!(DocumentId::from_str("__x__").is_err());
-        assert!(DocumentId::from_str("__x").is_ok());
-        assert!(DocumentId::from_str("x__").is_ok());
+    fn test_impl_from_str_and_impl_try_from_string() -> anyhow::Result<()> {
+        for (s, expected) in [
+            ("chatroom1", true),
+            ("x".repeat(1501).as_ref(), false),
+            ("x".repeat(1500).as_ref(), true),
+            ("chat/room1", false),
+            (".", false),
+            (".x", true),
+            ("..", false),
+            ("..x", true),
+            ("__x__", false),
+            ("__x", true),
+            ("x__", true),
+        ] {
+            assert_eq!(DocumentId::from_str(s).is_ok(), expected);
+            assert_eq!(DocumentId::try_from(s.to_string()).is_ok(), expected);
+            if expected {
+                assert_eq!(
+                    DocumentId::from_str(s)?,
+                    DocumentId::try_from(s.to_string())?
+                );
+                assert_eq!(DocumentId::from_str(s)?.to_string(), s);
+            }
+        }
         Ok(())
     }
 }
