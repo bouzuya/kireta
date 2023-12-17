@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::{CollectionId, CollectionName, DatabaseName, DocumentId, DocumentPath};
+use crate::{CollectionId, CollectionName, CollectionPath, DatabaseName, DocumentId, DocumentPath};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -41,6 +41,10 @@ impl DocumentName {
 
     pub fn document_id(&self) -> &DocumentId {
         self.document_path.document_id()
+    }
+
+    pub fn parent(self) -> CollectionName {
+        CollectionName::new(self.database_name, CollectionPath::from(self.document_path))
     }
 }
 
@@ -230,6 +234,20 @@ mod tests {
         assert_eq!(
             document_name.to_string(),
             format!("{}/{}", database_name, document_path)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_parent() -> anyhow::Result<()> {
+        let document_name = DocumentName::from_str(
+            "projects/my-project/databases/my-database/documents/chatrooms/chatroom1",
+        )?;
+        assert_eq!(
+            document_name.parent(),
+            CollectionName::from_str(
+                "projects/my-project/databases/my-database/documents/chatrooms",
+            )?
         );
         Ok(())
     }
