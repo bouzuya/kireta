@@ -7,6 +7,14 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DocumentId(String);
 
+impl std::convert::TryFrom<&str> for DocumentId {
+    type Error = Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        Self::try_from(s.to_string())
+    }
+}
+
 impl std::convert::TryFrom<String> for DocumentId {
     type Error = Error;
 
@@ -44,7 +52,7 @@ impl std::str::FromStr for DocumentId {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        DocumentId::try_from(s.to_string())
+        Self::try_from(s)
     }
 }
 

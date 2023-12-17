@@ -30,32 +30,21 @@ impl CollectionName {
         }
     }
 
-    pub fn doc(self, document_id: &str) -> Result<DocumentName, Error> {
-        let document_id = DocumentId::from_str(document_id)?;
+    pub fn doc<T>(self, document_id: T) -> Result<DocumentName, Error>
+    where
+        T: TryInto<DocumentId, Error = crate::document_id::Error>,
+    {
+        let document_id = document_id.try_into()?;
         let document_path = DocumentPath::new(self.collection_path, document_id);
         let document_name = DocumentName::new(self.database_name, document_path);
         Ok(document_name)
     }
 }
 
-impl std::convert::TryFrom<String> for CollectionName {
+impl std::convert::TryFrom<&str> for CollectionName {
     type Error = Error;
 
-    fn try_from(s: String) -> Result<Self, Self::Error> {
-        CollectionName::from_str(s.as_str())
-    }
-}
-
-impl std::fmt::Display for CollectionName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}/{}", self.database_name, self.collection_path)
-    }
-}
-
-impl std::str::FromStr for CollectionName {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
         // <https://firebase.google.com/docs/firestore/quotas#collections_documents_and_fields>
         if s.len() > 6_144 {
             return Err(Error::ToDo);
@@ -70,6 +59,28 @@ impl std::str::FromStr for CollectionName {
             collection_path: CollectionPath::from_str(&parts[5..].join("/"))?,
             database_name: DatabaseName::from_str(&parts[0..5].join("/"))?,
         })
+    }
+}
+
+impl std::convert::TryFrom<String> for CollectionName {
+    type Error = Error;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        Self::try_from(s.as_str())
+    }
+}
+
+impl std::fmt::Display for CollectionName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}/{}", self.database_name, self.collection_path)
+    }
+}
+
+impl std::str::FromStr for CollectionName {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::try_from(s)
     }
 }
 
@@ -150,8 +161,10 @@ mod tests {
             (s2.as_str(), false),
         ] {
             assert_eq!(CollectionName::from_str(s).is_ok(), expected);
+            assert_eq!(CollectionName::try_from(s).is_ok(), expected);
             assert_eq!(CollectionName::try_from(s.to_string()).is_ok(), expected);
             if expected {
+                assert_eq!(CollectionName::from_str(s)?, CollectionName::try_from(s)?);
                 assert_eq!(
                     CollectionName::from_str(s)?,
                     CollectionName::try_from(s.to_string())?

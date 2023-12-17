@@ -39,6 +39,14 @@ impl CollectionPath {
     }
 }
 
+impl std::convert::TryFrom<&str> for CollectionPath {
+    type Error = Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        Self::try_from(s.to_string())
+    }
+}
+
 impl std::convert::TryFrom<String> for CollectionPath {
     type Error = Error;
 
@@ -69,7 +77,7 @@ impl std::str::FromStr for CollectionPath {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        CollectionPath::try_from(s.to_string())
+        Self::try_from(s)
     }
 }
 
@@ -113,8 +121,10 @@ mod tests {
     fn test_impl_from_str_and_impl_try_from_string() -> anyhow::Result<()> {
         for (s, expected) in [("chatrooms", true), ("chatrooms/chatroom1/messages", true)] {
             assert_eq!(CollectionPath::from_str(s).is_ok(), expected);
+            assert_eq!(CollectionPath::try_from(s).is_ok(), expected);
             assert_eq!(CollectionPath::try_from(s.to_string()).is_ok(), expected);
             if expected {
+                assert_eq!(CollectionPath::from_str(s)?, CollectionPath::try_from(s)?);
                 assert_eq!(
                     CollectionPath::from_str(s)?,
                     CollectionPath::try_from(s.to_string())?

@@ -36,24 +36,10 @@ impl DocumentName {
     }
 }
 
-impl std::convert::TryFrom<String> for DocumentName {
+impl std::convert::TryFrom<&str> for DocumentName {
     type Error = Error;
 
-    fn try_from(s: String) -> Result<Self, Self::Error> {
-        DocumentName::from_str(s.as_str())
-    }
-}
-
-impl std::fmt::Display for DocumentName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}/{}", self.database_name, self.document_path)
-    }
-}
-
-impl std::str::FromStr for DocumentName {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
         // <https://firebase.google.com/docs/firestore/quotas#collections_documents_and_fields>
         if s.len() > 6_144 {
             return Err(Error::ToDo);
@@ -68,6 +54,28 @@ impl std::str::FromStr for DocumentName {
             database_name: DatabaseName::from_str(&parts[0..5].join("/"))?,
             document_path: DocumentPath::from_str(&parts[5..].join("/"))?,
         })
+    }
+}
+
+impl std::convert::TryFrom<String> for DocumentName {
+    type Error = Error;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        Self::try_from(s.as_str())
+    }
+}
+
+impl std::fmt::Display for DocumentName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}/{}", self.database_name, self.document_path)
+    }
+}
+
+impl std::str::FromStr for DocumentName {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::try_from(s)
     }
 }
 
@@ -149,8 +157,10 @@ mod tests {
             (s2.as_ref(), false),
         ] {
             assert_eq!(DocumentName::from_str(s).is_ok(), expected);
+            assert_eq!(DocumentName::try_from(s).is_ok(), expected);
             assert_eq!(DocumentName::try_from(s.to_string()).is_ok(), expected);
             if expected {
+                assert_eq!(DocumentName::from_str(s)?, DocumentName::try_from(s)?);
                 assert_eq!(
                     DocumentName::from_str(s)?,
                     DocumentName::try_from(s.to_string())?

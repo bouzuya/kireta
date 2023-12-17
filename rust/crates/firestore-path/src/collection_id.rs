@@ -8,6 +8,14 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct CollectionId(String);
 
+impl std::convert::TryFrom<&str> for CollectionId {
+    type Error = Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        Self::try_from(s.to_string())
+    }
+}
+
 impl std::convert::TryFrom<String> for CollectionId {
     type Error = Error;
 
@@ -39,7 +47,7 @@ impl std::str::FromStr for CollectionId {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        CollectionId::try_from(s.to_string())
+        Self::try_from(s)
     }
 }
 
@@ -76,8 +84,10 @@ mod tests {
             ("x__", true),
         ] {
             assert_eq!(CollectionId::from_str(s).is_ok(), expected);
+            assert_eq!(CollectionId::try_from(s).is_ok(), expected);
             assert_eq!(CollectionId::try_from(s.to_string()).is_ok(), expected);
             if expected {
+                assert_eq!(CollectionId::from_str(s)?, CollectionId::try_from(s)?);
                 assert_eq!(
                     CollectionId::from_str(s)?,
                     CollectionId::try_from(s.to_string())?

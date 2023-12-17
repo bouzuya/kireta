@@ -7,6 +7,14 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DatabaseId(String);
 
+impl std::convert::TryFrom<&str> for DatabaseId {
+    type Error = Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        Self::try_from(s.to_string())
+    }
+}
+
 impl std::convert::TryFrom<String> for DatabaseId {
     type Error = Error;
 
@@ -51,7 +59,7 @@ impl std::str::FromStr for DatabaseId {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        DatabaseId::try_from(s.to_string())
+        Self::try_from(s)
     }
 }
 
@@ -90,8 +98,10 @@ mod tests {
             ("xxx0", true),
         ] {
             assert_eq!(DatabaseId::from_str(s).is_ok(), expected);
+            assert_eq!(DatabaseId::try_from(s).is_ok(), expected);
             assert_eq!(DatabaseId::try_from(s.to_string()).is_ok(), expected);
             if expected {
+                assert_eq!(DatabaseId::from_str(s)?, DatabaseId::try_from(s)?);
                 assert_eq!(
                     DatabaseId::from_str(s)?,
                     DatabaseId::try_from(s.to_string())?

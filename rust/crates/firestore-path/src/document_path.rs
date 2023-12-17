@@ -36,11 +36,29 @@ impl DocumentPath {
     }
 }
 
+impl std::convert::TryFrom<&str> for DocumentPath {
+    type Error = Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        Ok(match s.rsplit_once('/') {
+            Some((collection_path, document_id)) => Self {
+                collection_path: Box::new(
+                    CollectionPath::from_str(collection_path).map_err(Box::new)?,
+                ),
+                document_id: DocumentId::from_str(document_id)?,
+            },
+            None => {
+                return Err(Error::ToDo);
+            }
+        })
+    }
+}
+
 impl std::convert::TryFrom<String> for DocumentPath {
     type Error = Error;
 
     fn try_from(s: String) -> Result<Self, Self::Error> {
-        DocumentPath::from_str(s.as_str())
+        Self::from_str(s.as_str())
     }
 }
 
@@ -54,17 +72,7 @@ impl std::str::FromStr for DocumentPath {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s.rsplit_once('/') {
-            Some((collection_path, document_id)) => Self {
-                collection_path: Box::new(
-                    CollectionPath::from_str(collection_path).map_err(Box::new)?,
-                ),
-                document_id: DocumentId::from_str(document_id)?,
-            },
-            None => {
-                return Err(Error::ToDo);
-            }
-        })
+        Self::try_from(s)
     }
 }
 
@@ -111,8 +119,10 @@ mod tests {
             ("chatrooms/chatroom1/messages/message1", true),
         ] {
             assert_eq!(DocumentPath::from_str(s).is_ok(), expected);
+            assert_eq!(DocumentPath::try_from(s).is_ok(), expected);
             assert_eq!(DocumentPath::try_from(s.to_string()).is_ok(), expected);
             if expected {
+                assert_eq!(DocumentPath::from_str(s)?, DocumentPath::try_from(s)?);
                 assert_eq!(
                     DocumentPath::from_str(s)?,
                     DocumentPath::try_from(s.to_string())?

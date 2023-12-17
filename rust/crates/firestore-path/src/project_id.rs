@@ -7,6 +7,14 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ProjectId(String);
 
+impl std::convert::TryFrom<&str> for ProjectId {
+    type Error = Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        Self::try_from(s.to_string())
+    }
+}
+
 impl std::convert::TryFrom<String> for ProjectId {
     type Error = Error;
 
@@ -56,7 +64,7 @@ impl std::str::FromStr for ProjectId {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        ProjectId::try_from(s.to_string())
+        Self::try_from(s)
     }
 }
 
@@ -95,8 +103,10 @@ mod tests {
             ("xssl", false),
         ] {
             assert_eq!(ProjectId::from_str(s).is_ok(), expected);
+            assert_eq!(ProjectId::try_from(s).is_ok(), expected);
             assert_eq!(ProjectId::try_from(s.to_string()).is_ok(), expected);
             if expected {
+                assert_eq!(ProjectId::from_str(s)?, ProjectId::try_from(s)?);
                 assert_eq!(ProjectId::from_str(s)?, ProjectId::try_from(s.to_string())?);
                 assert_eq!(ProjectId::from_str(s)?.to_string(), s);
             }
