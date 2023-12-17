@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::{CollectionId, CollectionName, DatabaseName, DocumentPath};
+use crate::{CollectionId, CollectionName, DatabaseName, DocumentId, DocumentPath};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -37,6 +37,16 @@ impl DocumentName {
             self.database_name,
             self.document_path.collection(collection_id)?,
         ))
+    }
+
+    pub fn document_id(&self) -> &DocumentId {
+        self.document_path.document_id()
+    }
+}
+
+impl std::convert::From<DocumentName> for DocumentId {
+    fn from(document_name: DocumentName) -> Self {
+        Self::from(document_name.document_path)
     }
 }
 
@@ -133,6 +143,30 @@ mod tests {
             CollectionName::from_str(
                 "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages"
             )?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_document_id() -> anyhow::Result<()> {
+        let document_name = DocumentName::from_str(
+            "projects/my-project/databases/my-database/documents/chatrooms/chatroom1",
+        )?;
+        assert_eq!(
+            document_name.document_id(),
+            &DocumentId::from_str("chatroom1")?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_impl_from_document_name_for_document_id() -> anyhow::Result<()> {
+        let document_name = DocumentName::from_str(
+            "projects/my-project/databases/my-database/documents/chatrooms/chatroom1",
+        )?;
+        assert_eq!(
+            DocumentId::from(document_name),
+            DocumentId::from_str("chatroom1")?
         );
         Ok(())
     }

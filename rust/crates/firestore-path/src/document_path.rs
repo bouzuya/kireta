@@ -40,6 +40,16 @@ impl DocumentPath {
         let collection_path = CollectionPath::new(Some(self), collection_id);
         Ok(collection_path)
     }
+
+    pub fn document_id(&self) -> &DocumentId {
+        &self.document_id
+    }
+}
+
+impl std::convert::From<DocumentPath> for DocumentId {
+    fn from(document_path: DocumentPath) -> Self {
+        document_path.document_id
+    }
 }
 
 impl std::convert::TryFrom<&str> for DocumentPath {
@@ -122,6 +132,26 @@ mod tests {
         assert_eq!(
             collection_path,
             CollectionPath::from_str("chatrooms/chatroom1/messages")?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_document_id() -> anyhow::Result<()> {
+        let document_path = DocumentPath::from_str("chatrooms/chatroom1")?;
+        assert_eq!(
+            document_path.document_id(),
+            &DocumentId::from_str("chatroom1")?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_impl_from_document_path_for_document_id() -> anyhow::Result<()> {
+        let document_path = DocumentPath::from_str("chatrooms/chatroom1")?;
+        assert_eq!(
+            DocumentId::from(document_path),
+            DocumentId::from_str("chatroom1")?
         );
         Ok(())
     }
