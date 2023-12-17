@@ -9,7 +9,7 @@ pub enum Error {
     #[error("database name {0}")]
     DatabaseName(#[from] crate::database_name::Error),
     #[error("document id {0}")]
-    DocumentId(#[from] crate::document_id::Error),
+    DocumentId(String),
     #[error("todo")]
     ToDo,
 }
@@ -30,11 +30,14 @@ impl CollectionName {
         }
     }
 
-    pub fn doc<T>(self, document_id: T) -> Result<DocumentName, Error>
+    pub fn doc<E, T>(self, document_id: T) -> Result<DocumentName, Error>
     where
-        T: TryInto<DocumentId, Error = crate::document_id::Error>,
+        E: std::fmt::Display,
+        T: TryInto<DocumentId, Error = E>,
     {
-        let document_id = document_id.try_into()?;
+        let document_id = document_id
+            .try_into()
+            .map_err(|e| Error::DocumentId(e.to_string()))?;
         let document_path = DocumentPath::new(self.collection_path, document_id);
         let document_name = DocumentName::new(self.database_name, document_path);
         Ok(document_name)
@@ -127,6 +130,19 @@ mod tests {
                 "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages/message1"
             )?
         );
+
+        let collection_name = CollectionName::from_str(
+            "projects/my-project/databases/my-database/documents/chatrooms",
+        )?;
+        let document_id = DocumentId::from_str("chatroom1")?;
+        let document_name = collection_name.doc(document_id)?;
+        assert_eq!(
+            document_name,
+            DocumentName::from_str(
+                "projects/my-project/databases/my-database/documents/chatrooms/chatroom1"
+            )?
+        );
+
         Ok(())
     }
 

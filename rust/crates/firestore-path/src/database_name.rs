@@ -5,7 +5,7 @@ use crate::{CollectionId, CollectionName, CollectionPath, DatabaseId, ProjectId}
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("collection id {0}")]
-    CollectionId(#[from] crate::collection_id::Error),
+    CollectionId(String),
     #[error("database id {0}")]
     DatabaseId(#[from] crate::database_id::Error),
     #[error("project id {0}")]
@@ -29,8 +29,14 @@ impl DatabaseName {
         }
     }
 
-    pub fn collection(self, collection_id: &str) -> Result<CollectionName, Error> {
-        let collection_id = CollectionId::from_str(collection_id)?;
+    pub fn collection<E, T>(self, collection_id: T) -> Result<CollectionName, Error>
+    where
+        E: std::fmt::Display,
+        T: TryInto<CollectionId, Error = E>,
+    {
+        let collection_id = collection_id
+            .try_into()
+            .map_err(|e| Error::CollectionId(e.to_string()))?;
         let collection_path = CollectionPath::new(None, collection_id);
         let collection_name = CollectionName::new(self, collection_path);
         Ok(collection_name)
@@ -108,6 +114,17 @@ mod tests {
         let database_name =
             DatabaseName::from_str("projects/my-project/databases/my-database/documents")?;
         let collection_name = database_name.collection("chatrooms")?;
+        assert_eq!(
+            collection_name,
+            CollectionName::from_str(
+                "projects/my-project/databases/my-database/documents/chatrooms"
+            )?
+        );
+
+        let database_name =
+            DatabaseName::from_str("projects/my-project/databases/my-database/documents")?;
+        let collection_id = CollectionId::from_str("chatrooms")?;
+        let collection_name = database_name.collection(collection_id)?;
         assert_eq!(
             collection_name,
             CollectionName::from_str(

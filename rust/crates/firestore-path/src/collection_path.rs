@@ -8,7 +8,7 @@ pub enum Error {
     #[error("collection id {0}")]
     CollectionId(#[from] crate::collection_id::Error),
     #[error("document id {0}")]
-    DocumentId(#[from] crate::document_id::Error),
+    DocumentId(String),
     #[error("document path {0}")]
     DocumentPath(#[from] crate::document_path::Error),
     #[error("todo")]
@@ -32,8 +32,14 @@ impl CollectionPath {
         }
     }
 
-    pub fn doc(self, document_id: &str) -> Result<DocumentPath, Error> {
-        let document_id = DocumentId::from_str(document_id)?;
+    pub fn doc<E, T>(self, document_id: T) -> Result<DocumentPath, Error>
+    where
+        E: std::fmt::Display,
+        T: TryInto<DocumentId, Error = E>,
+    {
+        let document_id = document_id
+            .try_into()
+            .map_err(|e| Error::DocumentId(e.to_string()))?;
         let document_path = DocumentPath::new(self, document_id);
         Ok(document_path)
     }
@@ -114,6 +120,15 @@ mod tests {
             document_path,
             DocumentPath::from_str("chatrooms/chatroom1/messages/message1")?
         );
+
+        let collection_path = CollectionPath::from_str("chatrooms")?;
+        let document_id = DocumentId::from_str("chatroom1")?;
+        let document_path = collection_path.doc(document_id)?;
+        assert_eq!(
+            document_path,
+            DocumentPath::from_str("chatrooms/chatroom1")?
+        );
+
         Ok(())
     }
 

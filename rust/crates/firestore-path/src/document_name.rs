@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::{CollectionName, DatabaseName, DocumentPath};
+use crate::{CollectionId, CollectionName, DatabaseName, DocumentPath};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -28,7 +28,11 @@ impl DocumentName {
         }
     }
 
-    pub fn collection(self, collection_id: &str) -> Result<CollectionName, Error> {
+    pub fn collection<E, T>(self, collection_id: T) -> Result<CollectionName, Error>
+    where
+        E: std::fmt::Display,
+        T: TryInto<CollectionId, Error = E>,
+    {
         Ok(CollectionName::new(
             self.database_name,
             self.document_path.collection(collection_id)?,
@@ -107,6 +111,7 @@ mod tests {
                 "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages"
             )?
         );
+
         let document_name = DocumentName::from_str(
             "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages/message1",
         )?;
@@ -115,6 +120,18 @@ mod tests {
             collection_name,
             CollectionName::from_str(
                 "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages/message1/col"
+            )?
+        );
+
+        let document_name = DocumentName::from_str(
+            "projects/my-project/databases/my-database/documents/chatrooms/chatroom1",
+        )?;
+        let collection_id = CollectionId::from_str("messages")?;
+        let collection_name = document_name.collection(collection_id)?;
+        assert_eq!(
+            collection_name,
+            CollectionName::from_str(
+                "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages"
             )?
         );
         Ok(())

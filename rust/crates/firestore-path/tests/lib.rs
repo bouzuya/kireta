@@ -30,6 +30,7 @@ fn test_building_structs_using_collection_and_doc_helpers() -> anyhow::Result<()
         document_name.to_string(),
         "projects/my-project/databases/my-database/documents/chatrooms/chatroom1/messages/message1"
     );
+
     let collection_path = CollectionPath::from_str("chatrooms")?;
     assert_eq!(collection_path.to_string(), "chatrooms");
     let document_path = collection_path.doc("chatroom1")?;
@@ -37,6 +38,15 @@ fn test_building_structs_using_collection_and_doc_helpers() -> anyhow::Result<()
     let collection_path = document_path.collection("messages")?;
     assert_eq!(collection_path.to_string(), "chatrooms/chatroom1/messages");
     let document_path = collection_path.doc("message1")?;
+    assert_eq!(
+        document_path.to_string(),
+        "chatrooms/chatroom1/messages/message1"
+    );
+
+    let document_path = CollectionPath::from_str("chatrooms")?
+        .doc(DocumentId::from_str("chatroom1")?)?
+        .collection(CollectionId::from_str("messages")?)?
+        .doc(DocumentId::from_str("message1")?)?;
     assert_eq!(
         document_path.to_string(),
         "chatrooms/chatroom1/messages/message1"
