@@ -1,33 +1,8 @@
 # firestore-path
 
+A Firestore path helper.
 
-## 名前付けのメモ
-
-- `document_name`
-  - `parent`
-    - `database_name` or `document_name`
-  - `collection_id`
-  - `document_id`
-
-- `resource_name`
-  - `database_name`
-  - `document_name`
-- `database_name` (`database_resource_name`, `database_root`)
-  - format: `projects/{project_id}/databases/{database_id}/documents`
-- `collection_name`
-  - format:
-    - `{database_name}/{collection_id}`
-    - `{document_name}/{collection_id}`
-- `collection_path`
-  - format:
-    - `{collection_id}`
-    - `{document_path}/{collection_id}`
-- `document_name` (`document_resource_name`)
-  - format: `{collection_name}/{document_path}`
-- `document_path`
-  - format: `{collection_path}/{document_id}`
-
----
+## NOTE: Naming
 
 <https://firebase.google.com/docs/firestore/data-model>
 
@@ -73,7 +48,7 @@
 
 - `DocumentReference`
 
-## Reference
+### Reference
 
 - Cloud Firestore Data model
   <https://firebase.google.com/docs/firestore/data-model>
