@@ -53,19 +53,32 @@ impl From<ItemDocumentData> for model::Item {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+enum Error {
+    #[error("client {0}")]
+    Client(#[from] super::firestore::client::Error),
+    #[error("invalid path {0}")]
+    InvalidPath(#[from] firestore_path::Error),
+}
+
+impl From<Error> for use_case::Error {
+    fn from(e: Error) -> Self {
+        Self::Unknown(e.to_string())
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct FirestoreStore {
     client: Arc<tokio::sync::Mutex<Client>>,
 }
 
-#[async_trait]
-impl Store for FirestoreStore {
-    async fn find_all_check_lists(&self) -> Result<Vec<model::CheckList>, use_case::Error> {
+impl FirestoreStore {
+    async fn find_all_check_lists(&self) -> Result<Vec<model::CheckList>, Error> {
         let mut client = self.client.lock().await;
-        let collection_path = client.collection("check_lists")?;
+        let collection_name = client.collection("check_lists")?;
         // TODO: pagination
         Ok(client
-            .list::<CheckListDocumentData>(&collection_path)
+            .list::<CheckListDocumentData>(&collection_name)
             .await?
             .0
             .into_iter()
@@ -74,12 +87,11 @@ impl Store for FirestoreStore {
             .collect())
     }
 
-    // TODO: remove
-    async fn find_all_checks(&self) -> Result<Vec<model::Check>, use_case::Error> {
+    async fn find_all_checks(&self) -> Result<Vec<model::Check>, Error> {
         let mut client = self.client.lock().await;
-        let collection_path = client.collection("checks")?;
+        let collection_name = client.collection("checks")?;
         Ok(client
-            .list::<CheckDocumentData>(&collection_path)
+            .list::<CheckDocumentData>(&collection_name)
             .await?
             .0
             .into_iter()
@@ -88,12 +100,12 @@ impl Store for FirestoreStore {
             .collect())
     }
 
-    async fn find_all_items(&self) -> Result<Vec<model::Item>, use_case::Error> {
+    async fn find_all_items(&self) -> Result<Vec<model::Item>, Error> {
         let mut client = self.client.lock().await;
-        let collection_path = client.collection("items")?;
+        let collection_name = client.collection("items")?;
         // TODO: pagination
         Ok(client
-            .list::<ItemDocumentData>(&collection_path)
+            .list::<ItemDocumentData>(&collection_name)
             .await?
             .0
             .into_iter()
@@ -129,8 +141,42 @@ impl Store for FirestoreStore {
     }
 }
 
+#[async_trait]
+impl Store for FirestoreStore {
+    async fn find_all_check_lists(&self) -> Result<Vec<model::CheckList>, use_case::Error> {
+        Ok(self.find_all_check_lists().await?)
+    }
+
+    // TODO: remove
+    async fn find_all_checks(&self) -> Result<Vec<model::Check>, use_case::Error> {
+        Ok(self.find_all_checks().await?)
+    }
+
+    async fn find_all_items(&self) -> Result<Vec<model::Item>, use_case::Error> {
+        Ok(self.find_all_items().await?)
+    }
+
+    async fn find_checks_by_check_list_id(
+        &self,
+        check_list_id: String,
+    ) -> Result<Vec<model::Check>, use_case::Error> {
+        Ok(self.find_checks_by_check_list_id(check_list_id).await?)
+    }
+
+    async fn find_checks_by_item_id(
+        &self,
+        item_id: String,
+    ) -> Result<Vec<model::Check>, use_case::Error> {
+        Ok(self.find_checks_by_item_id(item_id).await?)
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr as _;
+
+    use firestore_path::{DatabaseId, DatabaseName, ProjectId};
+
     use crate::infra::firestore::document::Document;
 
     use super::*;
@@ -139,13 +185,15 @@ mod tests {
     async fn test_find_all_check_lists() -> anyhow::Result<()> {
         let endpoint = "http://firebase:8080";
         let mut client = Client::new(
-            "demo-project1".to_string(),
-            "(default)".to_string(),
+            DatabaseName::new(
+                ProjectId::from_str("demo-project1")?,
+                DatabaseId::from_str("(default)")?,
+            ),
             endpoint,
         )
         .await?;
         let collection = client.collection("check_lists")?;
-        let doc = collection.doc("1")?;
+        let doc = collection.clone().doc("1")?;
 
         let input = CheckListDocumentData {
             date: "2020-01-02".to_string(),
@@ -174,13 +222,15 @@ mod tests {
     async fn test_find_all_items() -> anyhow::Result<()> {
         let endpoint = "http://firebase:8080";
         let mut client = Client::new(
-            "demo-project1".to_string(),
-            "(default)".to_string(),
+            DatabaseName::new(
+                ProjectId::from_str("demo-project1")?,
+                DatabaseId::from_str("(default)")?,
+            ),
             endpoint,
         )
         .await?;
         let collection = client.collection("items")?;
-        let doc = collection.doc("1")?;
+        let doc = collection.clone().doc("1")?;
 
         let input = ItemDocumentData {
             id: "1".to_string(),

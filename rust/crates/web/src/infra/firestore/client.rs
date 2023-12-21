@@ -1,5 +1,6 @@
 use std::{future::Future, pin::Pin};
 
+use firestore_path::{CollectionName, CollectionPath, DatabaseName, DocumentName};
 use google_api_proto::google::firestore::v1::{
     firestore_client::FirestoreClient, get_document_request::ConsistencySelector,
     precondition::ConditionType, value::ValueType, write::Operation, BeginTransactionRequest,
@@ -14,11 +15,7 @@ use tonic::transport::Channel;
 
 use crate::{infra::firestore::document, use_case};
 
-use super::{
-    document::Document,
-    path::{self, CollectionPath, DocumentPath, RootPath},
-    timestamp::Timestamp,
-};
+use super::{document::Document, timestamp::Timestamp};
 
 pub struct Transaction {
     client: Client,
@@ -27,14 +24,14 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    pub fn create<T>(&mut self, document_path: &DocumentPath, fields: T) -> Result<(), Error>
+    pub fn create<T>(&mut self, document_name: &DocumentName, fields: T) -> Result<(), Error>
     where
         T: Serialize,
     {
         self.writes.push(Write {
             operation: Some(Operation::Update(
                 google_api_proto::google::firestore::v1::Document {
-                    name: document_path.path(),
+                    name: document_name.to_string(),
                     fields: {
                         let ser = to_value(&fields)?;
                         if let Some(ValueType::MapValue(MapValue { fields })) = ser.value_type {
@@ -58,11 +55,11 @@ impl Transaction {
 
     pub fn delete(
         &mut self,
-        document_path: &DocumentPath,
+        document_name: &DocumentName,
         current_update_time: Timestamp,
     ) -> Result<(), Error> {
         self.writes.push(Write {
-            operation: Some(Operation::Delete(document_path.path())),
+            operation: Some(Operation::Delete(document_name.to_string())),
             update_mask: None,
             update_transforms: vec![],
             current_document: Some(Precondition {
@@ -74,7 +71,7 @@ impl Transaction {
         Ok(())
     }
 
-    pub async fn get<U>(&mut self, document_path: &DocumentPath) -> Result<Document<U>, Error>
+    pub async fn get<U>(&mut self, document_name: &DocumentName) -> Result<Document<U>, Error>
     where
         U: DeserializeOwned,
     {
@@ -82,7 +79,7 @@ impl Transaction {
             .client
             .client
             .get_document(GetDocumentRequest {
-                name: document_path.path(),
+                name: document_name.to_string(),
                 mask: None,
                 consistency_selector: Some(ConsistencySelector::Transaction(
                     self.transaction.clone(),
@@ -108,7 +105,7 @@ pub enum Error {
     #[error("deserialize {0}")]
     Deserialize(#[from] document::Error),
     #[error("path {0}")]
-    Path(#[from] path::Error),
+    Path(#[from] firestore_path::Error),
     #[error("serialize {0}")]
     Serialize(#[from] serde_firestore_value::Error),
     #[error("status {0}")]
@@ -130,17 +127,13 @@ impl From<Error> for use_case::Error {
 #[derive(Clone, Debug)]
 pub struct Client {
     client: FirestoreClient<GoogleAuthz<Channel>>,
-    root_path: RootPath,
+    database_name: DatabaseName,
 }
 
 impl Client {
     // TODO: run_query
 
-    pub async fn new(
-        project_id: String,
-        database_id: String,
-        endpoint: &'static str,
-    ) -> Result<Self, Error> {
+    pub async fn new(database_name: DatabaseName, endpoint: &'static str) -> Result<Self, Error> {
         let credentials = Credentials::builder().no_credentials().build().await?;
         let channel = Channel::from_static(endpoint).connect().await?;
         let channel = GoogleAuthz::builder(channel)
@@ -148,15 +141,17 @@ impl Client {
             .build()
             .await;
         let client = FirestoreClient::new(channel);
-        let root_path = RootPath::new(project_id, database_id)?;
-        Ok(Self { client, root_path })
+        Ok(Self {
+            client,
+            database_name,
+        })
     }
 
     pub async fn begin_transaction(&mut self) -> Result<Transaction, Error> {
         let response = self
             .client
             .begin_transaction(BeginTransactionRequest {
-                database: self.root_path.database_name(),
+                database: self.database_name.to_string(),
                 options: None,
             })
             .await?;
@@ -168,16 +163,16 @@ impl Client {
         })
     }
 
-    pub fn collection<S>(&self, collection_id: S) -> Result<CollectionPath, Error>
+    pub fn collection<S>(&self, collection_path: S) -> Result<CollectionName, Error>
     where
-        S: Into<String>,
+        S: TryInto<CollectionPath, Error = firestore_path::Error>,
     {
-        Ok(self.root_path.clone().collection(collection_id)?)
+        Ok(self.database_name.clone().collection(collection_path)?)
     }
 
     pub async fn create<T, U>(
         &mut self,
-        document_path: &DocumentPath,
+        document_name: &DocumentName,
         fields: T,
     ) -> Result<Document<U>, Error>
     where
@@ -187,9 +182,14 @@ impl Client {
         let response = self
             .client
             .create_document(CreateDocumentRequest {
-                parent: document_path.parent().parent().path(),
-                collection_id: document_path.parent().id().to_string(),
-                document_id: document_path.id().to_string(),
+                parent: document_name
+                    .clone()
+                    .parent()
+                    .parent()
+                    .map(|parent| parent.to_string())
+                    .unwrap_or_else(|| document_name.database_name().to_string()),
+                collection_id: document_name.collection_id().to_string(),
+                document_id: document_name.document_id().to_string(),
                 document: Some(google_api_proto::google::firestore::v1::Document {
                     name: "".to_string(),
                     fields: {
@@ -211,12 +211,12 @@ impl Client {
 
     pub async fn delete(
         &mut self,
-        document_path: &DocumentPath,
+        document_name: &DocumentName,
         current_update_time: Timestamp,
     ) -> Result<(), Error> {
         self.client
             .delete_document(DeleteDocumentRequest {
-                name: document_path.path(),
+                name: document_name.to_string(),
                 current_document: Some(Precondition {
                     condition_type: Some(ConditionType::UpdateTime(prost_types::Timestamp::from(
                         current_update_time,
@@ -227,14 +227,14 @@ impl Client {
         Ok(())
     }
 
-    pub async fn get<U>(&mut self, document_path: &DocumentPath) -> Result<Document<U>, Error>
+    pub async fn get<U>(&mut self, document_name: &DocumentName) -> Result<Document<U>, Error>
     where
         U: DeserializeOwned,
     {
         let response = self
             .client
             .get_document(GetDocumentRequest {
-                name: document_path.path(),
+                name: document_name.to_string(),
                 mask: None,
                 consistency_selector: None,
             })
@@ -245,7 +245,7 @@ impl Client {
     // TODO: support some params
     pub async fn list<U>(
         &mut self,
-        collection_path: &CollectionPath,
+        collection_name: &CollectionName,
     ) -> Result<(Vec<Document<U>>, Option<String>), Error>
     where
         U: DeserializeOwned,
@@ -253,8 +253,12 @@ impl Client {
         let response = self
             .client
             .list_documents(ListDocumentsRequest {
-                parent: collection_path.parent().path(),
-                collection_id: collection_path.id().to_string(),
+                parent: collection_name
+                    .clone()
+                    .parent()
+                    .map(|parent| parent.to_string())
+                    .unwrap_or_else(|| collection_name.database_name().to_string()),
+                collection_id: collection_name.collection_id().to_string(),
                 page_size: 100,
                 ..Default::default()
             })
@@ -291,7 +295,7 @@ impl Client {
         let response = self
             .client
             .begin_transaction(BeginTransactionRequest {
-                database: self.root_path.database_name(),
+                database: self.database_name.to_string(),
                 options: None,
             })
             .await?;
@@ -306,7 +310,7 @@ impl Client {
                 let response = self
                     .client
                     .commit(CommitRequest {
-                        database: self.root_path.database_name(),
+                        database: self.database_name.to_string(),
                         writes: transaction.writes,
                         transaction: transaction.transaction,
                     })
@@ -319,7 +323,7 @@ impl Client {
                 match self
                     .client
                     .rollback(RollbackRequest {
-                        database: self.root_path.database_name(),
+                        database: self.database_name.to_string(),
                         transaction: transaction.transaction,
                     })
                     .await
@@ -336,7 +340,7 @@ impl Client {
 
     pub async fn update<T, U>(
         &mut self,
-        document_path: &DocumentPath,
+        document_name: &DocumentName,
         fields: T,
         current_update_time: Timestamp,
     ) -> Result<Document<U>, Error>
@@ -348,7 +352,7 @@ impl Client {
             .client
             .update_document(UpdateDocumentRequest {
                 document: Some(google_api_proto::google::firestore::v1::Document {
-                    name: document_path.path(),
+                    name: document_name.to_string(),
                     fields: {
                         let ser = to_value(&fields)?;
                         if let Some(ValueType::MapValue(MapValue { fields })) = ser.value_type {

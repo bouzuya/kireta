@@ -1,10 +1,13 @@
 pub mod client;
 pub mod document;
-pub mod path;
 pub mod timestamp;
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr as _;
+
+    use firestore_path::{DatabaseId, DatabaseName, ProjectId};
+
     use crate::infra::firestore::{
         client::{Client, Error},
         document::Document,
@@ -14,20 +17,22 @@ mod tests {
     async fn test() -> anyhow::Result<()> {
         let endpoint = "http://firebase:8080";
         let mut client = Client::new(
-            "demo-project1".to_string(),
-            "(default)".to_string(),
+            DatabaseName::new(
+                ProjectId::from_str("demo-project1")?,
+                DatabaseId::from_str("(default)")?,
+            ),
             endpoint,
         )
         .await?;
-        let collection_path = client.collection("repositories")?;
+        let collection_name = client.collection("repositories")?;
 
         assert_eq!(
-            collection_path.path(),
+            collection_name.to_string(),
             "projects/demo-project1/databases/(default)/documents/repositories"
         );
 
         // reset
-        let (documents, _) = client.list::<V>(&collection_path).await?;
+        let (documents, _) = client.list::<V>(&collection_name).await?;
         for doc in documents {
             client.delete(doc.name(), doc.update_time()).await?;
         }
@@ -40,10 +45,10 @@ mod tests {
         let input = V {
             k1: "v1".to_string(),
         };
-        let document_path = collection_path.clone().doc("1")?;
+        let document_path = collection_name.clone().doc("1")?;
         let created = client.create(&document_path, input.clone()).await?;
         assert_eq!(
-            created.name().path(),
+            created.name().to_string(),
             "projects/demo-project1/databases/(default)/documents/repositories/1"
         );
         assert_eq!(created.clone().data(), input);
@@ -53,7 +58,7 @@ mod tests {
         assert_eq!(got, created);
 
         // READ (LIST)
-        let (documents, next_page_token) = client.list::<V>(&collection_path).await?;
+        let (documents, next_page_token) = client.list::<V>(&collection_name).await?;
         assert_eq!(documents, vec![got.clone()]);
         assert_eq!(next_page_token, None);
 
@@ -84,20 +89,22 @@ mod tests {
     async fn test_transaction() -> anyhow::Result<()> {
         let endpoint = "http://firebase:8080";
         let mut client = Client::new(
-            "demo-project1".to_string(),
-            "(default)".to_string(),
+            DatabaseName::new(
+                ProjectId::from_str("demo-project1")?,
+                DatabaseId::from_str("(default)")?,
+            ),
             endpoint,
         )
         .await?;
-        let collection_path = client.collection("transactions")?;
+        let collection_name = client.collection("transactions")?;
 
         // reset
-        let (documents, _) = client.list::<V>(&collection_path).await?;
+        let (documents, _) = client.list::<V>(&collection_name).await?;
         for doc in documents {
             client.delete(doc.name(), doc.update_time()).await?;
         }
 
-        let document_path = collection_path.doc("1")?;
+        let document_name = collection_name.doc("1")?;
 
         #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
         struct V {
@@ -109,18 +116,18 @@ mod tests {
         };
         client
             .run_transaction(|transaction| {
-                let p = document_path.clone();
+                let p = document_name.clone();
                 Box::pin(async move {
                     transaction.create(&p, input)?;
                     Ok(())
                 })
             })
             .await?;
-        assert!(client.get::<V>(&document_path).await.is_ok());
+        assert!(client.get::<V>(&document_name).await.is_ok());
 
         let result = client
             .run_transaction(|transaction| {
-                let p = document_path.clone();
+                let p = document_name.clone();
                 Box::pin(async move {
                     let got = transaction.get::<V>(&p).await?;
                     transaction.delete(&p, got.update_time())?;
@@ -130,20 +137,20 @@ mod tests {
             .await;
         assert!(result.is_err());
         // Not deleted because it was rolled back
-        assert!(client.get::<V>(&document_path).await.is_ok());
+        assert!(client.get::<V>(&document_name).await.is_ok());
 
-        let got = client.get::<V>(&document_path).await?;
+        let got = client.get::<V>(&document_name).await?;
         let current_update_time = got.update_time();
         client
             .run_transaction(|transaction| {
-                let p = document_path.clone();
+                let p = document_name.clone();
                 Box::pin(async move {
                     transaction.delete(&p, current_update_time)?;
                     Ok(())
                 })
             })
             .await?;
-        let err = client.get::<V>(&document_path).await.unwrap_err();
+        let err = client.get::<V>(&document_name).await.unwrap_err();
         if let crate::infra::firestore::client::Error::Status(status) = err {
             assert_eq!(status.code(), tonic::Code::NotFound);
         } else {

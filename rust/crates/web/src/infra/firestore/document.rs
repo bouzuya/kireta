@@ -1,10 +1,11 @@
 use std::str::FromStr;
 
+use firestore_path::DocumentName;
 use google_api_proto::google::firestore::v1::{
     value::ValueType, Document as FirestoreDocument, MapValue, Value,
 };
 
-use super::{path::DocumentPath, timestamp::Timestamp};
+use super::timestamp::Timestamp;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -15,14 +16,14 @@ pub enum Error {
     #[error("deserialize")]
     Deserialize(#[from] serde_firestore_value::Error),
     #[error("invalid name")]
-    InvalidName(#[from] crate::infra::firestore::path::Error),
+    InvalidName(#[from] firestore_path::Error),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Document<T> {
     create_time: Timestamp,
     data: T,
-    name: DocumentPath,
+    name: DocumentName,
     update_time: Timestamp,
 }
 
@@ -39,7 +40,7 @@ impl<T: serde::de::DeserializeOwned> Document<T> {
         let data: T = serde_firestore_value::from_value(&Value {
             value_type: Some(ValueType::MapValue(MapValue { fields })),
         })?;
-        let name = DocumentPath::from_str(name.as_str())?;
+        let name = DocumentName::from_str(name.as_str())?;
         let update_time = Timestamp::from(update_time.ok_or(Error::UpdateTimeIsNone)?);
         Ok(Self {
             create_time,
@@ -57,7 +58,7 @@ impl<T: serde::de::DeserializeOwned> Document<T> {
         self.data
     }
 
-    pub fn name(&self) -> &DocumentPath {
+    pub fn name(&self) -> &DocumentName {
         &self.name
     }
 
